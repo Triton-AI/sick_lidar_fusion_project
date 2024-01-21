@@ -1,0 +1,3 @@
+[console_scripts]
+fusion_node = cam_lidar_fusion.fusion_node:main
+

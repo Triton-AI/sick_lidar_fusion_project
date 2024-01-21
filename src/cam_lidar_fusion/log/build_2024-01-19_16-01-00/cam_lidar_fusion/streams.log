@@ -1,0 +1,29 @@
+[0.525s] Invoking command in '/home/david/Documents/UCSD/TritonAI/sick_lidar_fusion_project/src/cam_lidar_fusion': PYTHONPATH=/home/david/Documents/UCSD/TritonAI/sick_lidar_fusion_project/src/cam_lidar_fusion/build/cam_lidar_fusion/prefix_override:/home/david/Documents/UCSD/TritonAI/sick_lidar_fusion_project/src/cam_lidar_fusion/install/cam_lidar_fusion/lib/python3.10/site-packages:${PYTHONPATH} /usr/bin/python3 setup.py egg_info --egg-base build/cam_lidar_fusion build --build-base /home/david/Documents/UCSD/TritonAI/sick_lidar_fusion_project/src/cam_lidar_fusion/build/cam_lidar_fusion/build install --record /home/david/Documents/UCSD/TritonAI/sick_lidar_fusion_project/src/cam_lidar_fusion/build/cam_lidar_fusion/install.log --single-version-externally-managed
+[0.686s] running egg_info
+[0.686s] writing build/cam_lidar_fusion/cam_lidar_fusion.egg-info/PKG-INFO
+[0.687s] writing dependency_links to build/cam_lidar_fusion/cam_lidar_fusion.egg-info/dependency_links.txt
+[0.687s] writing entry points to build/cam_lidar_fusion/cam_lidar_fusion.egg-info/entry_points.txt
+[0.687s] writing requirements to build/cam_lidar_fusion/cam_lidar_fusion.egg-info/requires.txt
+[0.687s] writing top-level names to build/cam_lidar_fusion/cam_lidar_fusion.egg-info/top_level.txt
+[0.688s] reading manifest file 'build/cam_lidar_fusion/cam_lidar_fusion.egg-info/SOURCES.txt'
+[0.689s] writing manifest file 'build/cam_lidar_fusion/cam_lidar_fusion.egg-info/SOURCES.txt'
+[0.689s] running build
+[0.689s] running build_py
+[0.689s] copying cam_lidar_fusion/fusion_node.py -> /home/david/Documents/UCSD/TritonAI/sick_lidar_fusion_project/src/cam_lidar_fusion/build/cam_lidar_fusion/build/lib/cam_lidar_fusion
+[0.689s] copying cam_lidar_fusion/project_pointcloudy_to_image.py -> /home/david/Documents/UCSD/TritonAI/sick_lidar_fusion_project/src/cam_lidar_fusion/build/cam_lidar_fusion/build/lib/cam_lidar_fusion
+[0.689s] running install
+[0.689s] /usr/lib/python3/dist-packages/setuptools/command/install.py:34: SetuptoolsDeprecationWarning: setup.py install is deprecated. Use build and pip and other standards-based tools.
+[0.689s]   warnings.warn(
+[0.689s] running install_lib
+[0.690s] copying /home/david/Documents/UCSD/TritonAI/sick_lidar_fusion_project/src/cam_lidar_fusion/build/cam_lidar_fusion/build/lib/cam_lidar_fusion/fusion_node.py -> /home/david/Documents/UCSD/TritonAI/sick_lidar_fusion_project/src/cam_lidar_fusion/install/cam_lidar_fusion/lib/python3.10/site-packages/cam_lidar_fusion
+[0.690s] copying /home/david/Documents/UCSD/TritonAI/sick_lidar_fusion_project/src/cam_lidar_fusion/build/cam_lidar_fusion/build/lib/cam_lidar_fusion/project_pointcloudy_to_image.py -> /home/david/Documents/UCSD/TritonAI/sick_lidar_fusion_project/src/cam_lidar_fusion/install/cam_lidar_fusion/lib/python3.10/site-packages/cam_lidar_fusion
+[0.690s] byte-compiling /home/david/Documents/UCSD/TritonAI/sick_lidar_fusion_project/src/cam_lidar_fusion/install/cam_lidar_fusion/lib/python3.10/site-packages/cam_lidar_fusion/fusion_node.py to fusion_node.cpython-310.pyc
+[0.691s] byte-compiling /home/david/Documents/UCSD/TritonAI/sick_lidar_fusion_project/src/cam_lidar_fusion/install/cam_lidar_fusion/lib/python3.10/site-packages/cam_lidar_fusion/project_pointcloudy_to_image.py to project_pointcloudy_to_image.cpython-310.pyc
+[0.692s] running install_data
+[0.692s] running install_egg_info
+[0.693s] removing '/home/david/Documents/UCSD/TritonAI/sick_lidar_fusion_project/src/cam_lidar_fusion/install/cam_lidar_fusion/lib/python3.10/site-packages/cam_lidar_fusion-0.0.0-py3.10.egg-info' (and everything under it)
+[0.693s] Copying build/cam_lidar_fusion/cam_lidar_fusion.egg-info to /home/david/Documents/UCSD/TritonAI/sick_lidar_fusion_project/src/cam_lidar_fusion/install/cam_lidar_fusion/lib/python3.10/site-packages/cam_lidar_fusion-0.0.0-py3.10.egg-info
+[0.694s] running install_scripts
+[0.709s] Installing fusion_node script to /home/david/Documents/UCSD/TritonAI/sick_lidar_fusion_project/src/cam_lidar_fusion/install/cam_lidar_fusion/lib/cam_lidar_fusion
+[0.709s] writing list of installed files to '/home/david/Documents/UCSD/TritonAI/sick_lidar_fusion_project/src/cam_lidar_fusion/build/cam_lidar_fusion/install.log'
+[0.725s] Invoked command in '/home/david/Documents/UCSD/TritonAI/sick_lidar_fusion_project/src/cam_lidar_fusion' returned '0': PYTHONPATH=/home/david/Documents/UCSD/TritonAI/sick_lidar_fusion_project/src/cam_lidar_fusion/build/cam_lidar_fusion/prefix_override:/home/david/Documents/UCSD/TritonAI/sick_lidar_fusion_project/src/cam_lidar_fusion/install/cam_lidar_fusion/lib/python3.10/site-packages:${PYTHONPATH} /usr/bin/python3 setup.py egg_info --egg-base build/cam_lidar_fusion build --build-base /home/david/Documents/UCSD/TritonAI/sick_lidar_fusion_project/src/cam_lidar_fusion/build/cam_lidar_fusion/build install --record /home/david/Documents/UCSD/TritonAI/sick_lidar_fusion_project/src/cam_lidar_fusion/build/cam_lidar_fusion/install.log --single-version-externally-managed
