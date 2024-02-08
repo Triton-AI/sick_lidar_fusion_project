@@ -1,10 +1,13 @@
 import rclpy
 from rclpy.node import Node
+from sensor_msgs.msg import Image
+from cv_bridge import CvBridge
 from sensor_msgs.msg import PointCloud2
 # from sensor_msgs.msg import PointCloud
 from rclpy.qos import qos_profile_sensor_data
 import numpy as np
-# import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt
+import cv2
 
 
 class FusionNode(Node):
@@ -19,6 +22,14 @@ class FusionNode(Node):
         self.lidar_subs_  # prevent unused variable warning
         self.depth_matrix = np.array([])
 
+        self.fusion_img_pubs_ = self.create_publisher(Image, 'camera/fused_img', 10)
+        self.bridge = CvBridge()
+        self.cap = cv2.VideoCapture(0)
+        if not self.cap.isOpened():
+            print("Cannot open camera")
+            exit()
+        
+
     def lidar_subs_callback(self, msg):
         # print("Received: ", msg.fields)  # Print the received message
         lidar_points = np.array(list(read_points(msg, skip_nans=True))).T  # 4xn matrix, (x,y,z,i)
@@ -32,10 +43,28 @@ class FusionNode(Node):
 
         self.depth_matrix = points_to_img(filtered_x, filtered_y, filtered_p, img_size)
 
+        # Visualization and debugging ####################################################################################
+        # plt.figure(1)
+        # plt.scatter(filtered_x, filtered_y)
+        # plt.axis([0, img_size[1], 0, img_size[0]])
+        # plt.show()
+        ret, frame = self.cap.read()
+        if not ret:
+            print("Cannot receive frame")
+        # cv2.imshow('frame', frame)
+        for i in range(len(filtered_p)):
+            cv2.circle(frame, (filtered_x[i], filtered_y[i]), 4, (0,0,255), -1)
+        img_msg = self.bridge.cv2_to_imgmsg(frame, "bgr8")
+        self.fusion_img_pubs_.publish(img_msg)
+
+        # cv2.imshow('depth img', ((self.depth_matrix*1000).clip(0, 255)).astype(np.int8))
         # print('xs size: ', xs.shape)
-        # print('filtered_x size: ', filtered_x.shape)
-        print('depth_matrix size: ', self.depth_matrix.shape)
-        print('depth matrix: ', self.depth_matrix)
+        # print('filtered points size: ', filtered_x.shape)
+        # print('filtered p: ', filtered_p)
+        # print('depth_matrix size: ', self.depth_matrix.shape)
+        # print('max in depth_matrix: ', np.max(self.depth_matrix))
+        # np.set_printoptions(threshold=np.inf)
+        # print('depth matrix: ', self.depth_matrix)
         # fig = plt.figure()
         # ax = plt.axes(projection='3d')
         # X, Y = np.meshgrid(np.arange(0, img_size[1], 1), np.arange(0, img_size[0], 1))
@@ -46,7 +75,8 @@ def lidar2pixel(lidar_points, R, T, K):
     # R and T are (3, 3) and (3, )-like np arrays
     # K is (3, 3) camera calibration matrix
     xyz_lidar = lidar_points[0:3, :]
-    i = lidar_points[3, :]
+    # i = lidar_points[3, :]
+    i = np.linalg.norm(xyz_lidar, axis=0)
     xyz_lidar = np.vstack((xyz_lidar, np.ones((len(i), ))))
 
     lidar2cam = np.hstack((R, T.reshape((-1, 1))))
