@@ -31,10 +31,11 @@ class FusionNode(Node):
         
 
     def lidar_subs_callback(self, msg):
+        max_dist_thresh = 10  # the max distance used for color coding in visualization window.
         # print("Received: ", msg.fields)  # Print the received message
         lidar_points = np.array(list(read_points(msg, skip_nans=True))).T  # 4xn matrix, (x,y,z,i)
         R = np.array([[0, -1, 0], [0, 0, -1], [1, 0, 0]])  # Rotation from lidar to camera
-        T = np.array([0, 0, 0.1])  # Translation from lidar to camera
+        T = np.array([0, 0.2, 0])  # lidar frame position seen from the camera's frame
         K = np.array([[543.892, 0, 308.268], [0, 537.865, 214.227], [0, 0, 1]])  # K matrix from camera_calibration
         xs, ys, ps = lidar2pixel(lidar_points, R, T, K)
 
@@ -53,7 +54,8 @@ class FusionNode(Node):
             print("Cannot receive frame")
         # cv2.imshow('frame', frame)
         for i in range(len(filtered_p)):
-            cv2.circle(frame, (filtered_x[i], filtered_y[i]), 4, (0,0,255), -1)
+            color_intensity = int((filtered_p[i] / max_dist_thresh * 255).clip(0, 255))
+            cv2.circle(frame, (filtered_x[i], filtered_y[i]), 4, (0,color_intensity, 255 - color_intensity), -1)
         img_msg = self.bridge.cv2_to_imgmsg(frame, "bgr8")
         self.fusion_img_pubs_.publish(img_msg)
 

@@ -1,0 +1,7 @@
+/usr/lib/python3/dist-packages/setuptools/command/install.py:34: SetuptoolsDeprecationWarning: setup.py install is deprecated. Use build and pip and other standards-based tools.
+  warnings.warn(
+  File "/home/tritonai/projects/sick_lidar_fusion_project/src/cam_lidar_fusion/install/cam_lidar_fusion/lib/python3.10/site-packages/cam_lidar_fusion/fusion_node.py", line 59
+    print(255.type)
+             ^
+SyntaxError: invalid decimal literal
+
