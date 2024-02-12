@@ -26,7 +26,7 @@ class FusionNode(Node):
 
         self.oak_d_cam_subs = self.create_subscription(
             Image,
-            '/camera/image_0',
+            '/color/image',
             self.oak_d_cam_subs_callback,
             qos_profile_sensor_data
         )
@@ -80,26 +80,28 @@ class FusionNode(Node):
         frame = self.frame.copy()
         # ################################
         
-        cone_detection_boxes = detect_cones(frame, self.cone_hsv_lb, self.cone_hsv_ub)
-        
-        # fused_img = frame
-        for i in range(len(filtered_p)):
-            color_intensity = int((filtered_p[i] / max_dist_thresh * 255).clip(0, 255))
-            cv2.circle(frame, (filtered_x[i], filtered_y[i]), 4, (0,color_intensity, 255 - color_intensity), -1)
-        
-
-        for box in cone_detection_boxes:
-            x = box[0]
-            y = box[1]
-            w = box[2]
-            h = box[3]
-            cone_dist = np.min(self.depth_matrix[y:y+h, x:x+w])
-            # print('cone dist: ', cone_dist)
-            cv2.putText(frame, str(round(cone_dist, 2)), (x, y-5), cv2.FONT_HERSHEY_COMPLEX, 1, 255)
-            cv2.rectangle(frame, (x, y), (x+w, y+h), (1, 255, 1), 3)
-        
-        img_msg = self.bridge.cv2_to_imgmsg(frame, "bgr8")
-        self.fusion_img_pubs_.publish(img_msg)
+        if frame != None:
+            cone_detection_boxes = detect_cones(frame, self.cone_hsv_lb, self.cone_hsv_ub)
+            
+            # Draw circles for the lidar points
+            for i in range(len(filtered_p)):
+                color_intensity = int((filtered_p[i] / max_dist_thresh * 255).clip(0, 255))
+                cv2.circle(frame, (filtered_x[i], filtered_y[i]), 4, (0,color_intensity, 255 - color_intensity), -1)
+            
+            # Draw box for detected cones
+            # Print the lidar distance of the cone above the box
+            for box in cone_detection_boxes:
+                x = box[0]
+                y = box[1]
+                w = box[2]
+                h = box[3]
+                cone_dist = np.min(self.depth_matrix[y:y+h, x:x+w])
+                # print('cone dist: ', cone_dist)
+                cv2.putText(frame, "Cone: " + str(round(cone_dist, 2)), (x, y-5), cv2.FONT_HERSHEY_COMPLEX, 1, 255)
+                cv2.rectangle(frame, (x, y), (x+w, y+h), (1, 255, 1), 3)
+            
+            img_msg = self.bridge.cv2_to_imgmsg(frame, "bgr8")
+            self.fusion_img_pubs_.publish(img_msg)
 
         # Debugging #############################################################################################3
         # cv2.imshow('depth img', ((self.depth_matrix*1000).clip(0, 255)).astype(np.int8))
