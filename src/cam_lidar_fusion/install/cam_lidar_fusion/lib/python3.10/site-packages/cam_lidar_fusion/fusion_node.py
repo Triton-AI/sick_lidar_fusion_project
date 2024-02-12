@@ -9,6 +9,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 import cv2
 
+from cam_lidar_fusion.cone_detection import detect_cones
+
 
 class FusionNode(Node):
     def __init__(self):
@@ -22,6 +24,13 @@ class FusionNode(Node):
         self.lidar_subs_  # prevent unused variable warning
         self.depth_matrix = np.array([])
 
+        self.R = np.array([[0, -1, 0], [0, 0, -1], [1, 0, 0]])  # Rotation from lidar to camera
+        self.T = np.array([0, 0.2, 0])  # lidar frame position seen from the camera's frame
+        self.K = np.array([[543.892, 0, 308.268], [0, 537.865, 214.227], [0, 0, 1]])  # K matrix from camera_calibration
+
+        self.cone_hsv_lb = np.array([127, 98, 131])  # hsv threshold lower bound for detecting cones
+        self.cone_hsv_ub = np.array([180, 255, 255])  # hsv threshold upper bound for detecting cones
+
         self.fusion_img_pubs_ = self.create_publisher(Image, 'camera/fused_img', 10)
         self.bridge = CvBridge()
         self.cap = cv2.VideoCapture(0)
@@ -34,15 +43,13 @@ class FusionNode(Node):
         max_dist_thresh = 10  # the max distance used for color coding in visualization window.
         # print("Received: ", msg.fields)  # Print the received message
         lidar_points = np.array(list(read_points(msg, skip_nans=True))).T  # 4xn matrix, (x,y,z,i)
-        R = np.array([[0, -1, 0], [0, 0, -1], [1, 0, 0]])  # Rotation from lidar to camera
-        T = np.array([0, 0.2, 0])  # lidar frame position seen from the camera's frame
-        K = np.array([[543.892, 0, 308.268], [0, 537.865, 214.227], [0, 0, 1]])  # K matrix from camera_calibration
-        xs, ys, ps = lidar2pixel(lidar_points, R, T, K)
+        xs, ys, ps = lidar2pixel(lidar_points, self.R, self.T, self.K)
 
         img_size = (480, 640)
         filtered_x, filtered_y, filtered_p = filter_points(xs, ys, ps, img_size)
 
         self.depth_matrix = points_to_img(filtered_x, filtered_y, filtered_p, img_size)
+        self.depth_matrix[self.depth_matrix == 0.0] = np.inf
 
         # Visualization and debugging ####################################################################################
         # plt.figure(1)
@@ -53,9 +60,25 @@ class FusionNode(Node):
         if not ret:
             print("Cannot receive frame")
         # cv2.imshow('frame', frame)
+        
+        cone_detection_boxes = detect_cones(frame, self.cone_hsv_lb, self.cone_hsv_ub)
+        
+        # fused_img = frame
         for i in range(len(filtered_p)):
             color_intensity = int((filtered_p[i] / max_dist_thresh * 255).clip(0, 255))
             cv2.circle(frame, (filtered_x[i], filtered_y[i]), 4, (0,color_intensity, 255 - color_intensity), -1)
+        
+
+        for box in cone_detection_boxes:
+            x = box[0]
+            y = box[1]
+            w = box[2]
+            h = box[3]
+            cone_dist = np.min(self.depth_matrix[y:y+h, x:x+w])
+            # print('cone dist: ', cone_dist)
+            cv2.putText(frame, str(round(cone_dist, 2)), (x, y-5), cv2.FONT_HERSHEY_COMPLEX, 1, 255)
+            cv2.rectangle(frame, (x, y), (x+w, y+h), (1, 255, 1), 3)
+        
         img_msg = self.bridge.cv2_to_imgmsg(frame, "bgr8")
         self.fusion_img_pubs_.publish(img_msg)
 
@@ -119,6 +142,98 @@ def points_to_img(xs, ys, ps, size):
     img = np.bincount(abs_coords, weights=ps, minlength=size[0]*size[1])
     img = img.reshape(size)
     return img
+
+# def convex_hull_pointing_up(ch):
+
+#     points_above_center, points_below_center = [], []
+    
+#     x, y, w, h = cv2.boundingRect(ch)
+#     aspect_ratio = w / h
+
+#     if aspect_ratio < 0.8:
+#         vertical_center = y + h / 2
+
+#         for point in ch:
+#             if point[0][1] < vertical_center:
+#                 points_above_center.append(point)
+#             elif point[0][1] >= vertical_center:
+#                 points_below_center.append(point)
+
+#         left_x = points_below_center[0][0][0]
+#         right_x = points_below_center[0][0][0]
+#         for point in points_below_center:
+#             if point[0][0] < left_x:
+#                 left_x = point[0][0]
+#             if point[0][0] > right_x:
+#                 right_x = point[0][0]
+
+#         for point in points_above_center:
+#             if (point[0][0] < left_x) or (point[0][0] > right_x):
+#                 return False
+#     else:
+#         return False
+        
+#     return True
+
+# def detect_cones(frame, hsv_lb, hsv_ub):
+#     frame_hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+
+#     img_thresh = cv2.inRange(frame_hsv, hsv_lb, hsv_ub)
+#     # cv2.imshow('threshold', img_thresh)
+
+#     kernel = np.ones((5, 5))
+#     img_thresh_opened = cv2.morphologyEx(img_thresh, cv2.MORPH_OPEN, kernel)
+#     # cv2.imshow('thresh opened', img_thresh_opened)
+
+#     img_thresh_blurred = cv2.medianBlur(img_thresh_opened, 5)
+
+#     img_edges = cv2.Canny(img_thresh_blurred, 80, 160)
+
+#     contours, _ = cv2.findContours(np.array(img_edges), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+#     # img_contours = np.zeros_like(img_edges)
+#     # cv2.drawContours(img_contours, contours, -1, (255,255,255), 2)
+#     # cv2.imshow('contours', img_contours)
+
+#     approx_contours = []
+#     for c in contours:
+#         approx = cv2.approxPolyDP(c, 10, closed = True)
+#         approx_contours.append(approx)
+#     # img_approx_contours = np.zeros_like(img_edges)
+#     # cv2.drawContours(img_approx_contours, approx_contours, -1, (255,255,255), 1)
+
+#     all_convex_hulls = []
+#     for ac in approx_contours:
+#         all_convex_hulls.append(cv2.convexHull(ac))
+#     # img_all_convex_hulls = np.zeros_like(img_edges)
+#     # cv2.drawContours(img_all_convex_hulls, all_convex_hulls, -1, (255,255,255), 2)
+
+#     convex_hulls_3to10 = []
+#     for ch in all_convex_hulls:
+#         if 3 <= len(ch) <= 10:
+#             convex_hulls_3to10.append(cv2.convexHull(ch))
+#     # img_convex_hulls_3to10 = np.zeros_like(img_edges)
+#     # cv2.drawContours(img_convex_hulls_3to10, convex_hulls_3to10, -1, (255,255,255), 2)
+
+#     cones = []
+#     bounding_rects = []
+#     for ch in convex_hulls_3to10:
+#         if convex_hull_pointing_up(ch):
+#             cones.append(ch)
+#             rect = cv2.boundingRect(ch)
+#             bounding_rects.append(rect)
+#     # img_cones = np.zeros_like(img_edges)
+#     # cv2.drawContours(img_cones, cones, -1, (255,255,255), 2)
+#     # cv2.drawContours(img_cones, bounding_rects, -1, (1,255,1), 2)
+#     # cv2.imshow('find cones', img_cones)
+
+#     # img_res = frame
+#     # cv2.drawContours(img_res, cones, -1, (255,255,255), 2)
+
+#     # for rect in bounding_rects:
+#     #     cv2.rectangle(img_res, (rect[0], rect[1]), (rect[0]+rect[2], rect[1]+rect[3]), (1, 255, 1), 3)
+#     # cv2.imshow('cone detection result', img_res)
+
+#     return bounding_rects
 
 ## The code below is "ported" from 
 # https://github.com/ros/common_msgs/tree/noetic-devel/sensor_msgs/src/sensor_msgs

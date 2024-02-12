@@ -10,7 +10,9 @@ build/cam_lidar_fusion/cam_lidar_fusion.egg-info/top_level.txt
 build/cam_lidar_fusion/cam_lidar_fusion.egg-info/zip-safe
 cam_lidar_fusion/__init__.py
 cam_lidar_fusion/camera_calibration.py
+cam_lidar_fusion/cone_detection.py
 cam_lidar_fusion/fusion_node.py
+cam_lidar_fusion/hsv_param_picker.py
 cam_lidar_fusion/project_pointcloudy_to_image.py
 resource/cam_lidar_fusion
 test/test_copyright.py

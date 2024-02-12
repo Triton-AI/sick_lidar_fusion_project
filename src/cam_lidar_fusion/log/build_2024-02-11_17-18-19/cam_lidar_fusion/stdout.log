@@ -1,0 +1,23 @@
+running egg_info
+writing build/cam_lidar_fusion/cam_lidar_fusion.egg-info/PKG-INFO
+writing dependency_links to build/cam_lidar_fusion/cam_lidar_fusion.egg-info/dependency_links.txt
+writing entry points to build/cam_lidar_fusion/cam_lidar_fusion.egg-info/entry_points.txt
+writing requirements to build/cam_lidar_fusion/cam_lidar_fusion.egg-info/requires.txt
+writing top-level names to build/cam_lidar_fusion/cam_lidar_fusion.egg-info/top_level.txt
+reading manifest file 'build/cam_lidar_fusion/cam_lidar_fusion.egg-info/SOURCES.txt'
+writing manifest file 'build/cam_lidar_fusion/cam_lidar_fusion.egg-info/SOURCES.txt'
+running build
+running build_py
+copying cam_lidar_fusion/fusion_node.py -> /home/tritonai/projects/sick_lidar_fusion_project/src/cam_lidar_fusion/build/cam_lidar_fusion/build/lib/cam_lidar_fusion
+running install
+running install_lib
+copying /home/tritonai/projects/sick_lidar_fusion_project/src/cam_lidar_fusion/build/cam_lidar_fusion/build/lib/cam_lidar_fusion/fusion_node.py -> /home/tritonai/projects/sick_lidar_fusion_project/src/cam_lidar_fusion/install/cam_lidar_fusion/lib/python3.10/site-packages/cam_lidar_fusion
+byte-compiling /home/tritonai/projects/sick_lidar_fusion_project/src/cam_lidar_fusion/install/cam_lidar_fusion/lib/python3.10/site-packages/cam_lidar_fusion/fusion_node.py to fusion_node.cpython-310.pyc
+running install_data
+copying cam_lidar_fusion/cone_detection.py -> /home/tritonai/projects/sick_lidar_fusion_project/src/cam_lidar_fusion/install/cam_lidar_fusion/lib/cam_lidar_fusion
+running install_egg_info
+removing '/home/tritonai/projects/sick_lidar_fusion_project/src/cam_lidar_fusion/install/cam_lidar_fusion/lib/python3.10/site-packages/cam_lidar_fusion-0.0.0-py3.10.egg-info' (and everything under it)
+Copying build/cam_lidar_fusion/cam_lidar_fusion.egg-info to /home/tritonai/projects/sick_lidar_fusion_project/src/cam_lidar_fusion/install/cam_lidar_fusion/lib/python3.10/site-packages/cam_lidar_fusion-0.0.0-py3.10.egg-info
+running install_scripts
+Installing fusion_node script to /home/tritonai/projects/sick_lidar_fusion_project/src/cam_lidar_fusion/install/cam_lidar_fusion/lib/cam_lidar_fusion
+writing list of installed files to '/home/tritonai/projects/sick_lidar_fusion_project/src/cam_lidar_fusion/build/cam_lidar_fusion/install.log'
