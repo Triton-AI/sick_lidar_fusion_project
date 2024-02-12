@@ -1,7 +1,7 @@
 import rclpy
 from rclpy.node import Node
 from sensor_msgs.msg import Image
-from cv_bridge import CvBridge
+from cv_bridge import CvBridge, CvBridgeError
 from sensor_msgs.msg import PointCloud2
 # from sensor_msgs.msg import PointCloud
 from rclpy.qos import qos_profile_sensor_data
@@ -24,6 +24,14 @@ class FusionNode(Node):
         self.lidar_subs_  # prevent unused variable warning
         self.depth_matrix = np.array([])
 
+        self.oak_d_cam_subs = self.create_subscription(
+            Image,
+            '/color/image',
+            self.oak_d_cam_subs_callback,
+            qos_profile_sensor_data
+        )
+        self.frame = np.array([])
+
         self.R = np.array([[0, -1, 0], [0, 0, -1], [1, 0, 0]])  # Rotation from lidar to camera
         self.T = np.array([0, 0.2, 0])  # lidar frame position seen from the camera's frame
         self.K = np.array([[543.892, 0, 308.268], [0, 537.865, 214.227], [0, 0, 1]])  # K matrix from camera_calibration
@@ -33,11 +41,19 @@ class FusionNode(Node):
 
         self.fusion_img_pubs_ = self.create_publisher(Image, 'camera/fused_img', 10)
         self.bridge = CvBridge()
-        self.cap = cv2.VideoCapture(0)
-        if not self.cap.isOpened():
-            print("Cannot open camera")
-            exit()
+
+        # Webcam Video Capture #########################
+        # self.cap = cv2.VideoCapture(0)
+        # if not self.cap.isOpened():
+        #     print("Cannot open camera")
+        #     exit()
+        # ##############################################
         
+    def oak_d_cam_subs_callback(self, msg):
+        try:
+            self.frame = self.bridge.imgmsg_to_cv2(msg, "bgr8")
+        except CvBridgeError as e:
+            print(e)
 
     def lidar_subs_callback(self, msg):
         max_dist_thresh = 10  # the max distance used for color coding in visualization window.
@@ -51,15 +67,18 @@ class FusionNode(Node):
         self.depth_matrix = points_to_img(filtered_x, filtered_y, filtered_p, img_size)
         self.depth_matrix[self.depth_matrix == 0.0] = np.inf
 
-        # Visualization and debugging ####################################################################################
-        # plt.figure(1)
-        # plt.scatter(filtered_x, filtered_y)
-        # plt.axis([0, img_size[1], 0, img_size[0]])
-        # plt.show()
-        ret, frame = self.cap.read()
-        if not ret:
-            print("Cannot receive frame")
-        # cv2.imshow('frame', frame)
+        # Visualization ####################################################################################
+        # Choose between webcam and oak-d cam, remember to comment the VideoCapture in the __init__
+        # Webcam #########################
+        # ret, frame = self.cap.read()
+        # if not ret:
+        #     print("Cannot receive frame")
+        # # cv2.imshow('frame', frame)
+        # ################################
+        
+        # Oak-d cam ######################
+        frame = self.frame.copy()
+        # ################################
         
         cone_detection_boxes = detect_cones(frame, self.cone_hsv_lb, self.cone_hsv_ub)
         
@@ -82,6 +101,7 @@ class FusionNode(Node):
         img_msg = self.bridge.cv2_to_imgmsg(frame, "bgr8")
         self.fusion_img_pubs_.publish(img_msg)
 
+        # Debugging #############################################################################################3
         # cv2.imshow('depth img', ((self.depth_matrix*1000).clip(0, 255)).astype(np.int8))
         # print('xs size: ', xs.shape)
         # print('filtered points size: ', filtered_x.shape)
@@ -95,6 +115,8 @@ class FusionNode(Node):
         # X, Y = np.meshgrid(np.arange(0, img_size[1], 1), np.arange(0, img_size[0], 1))
         # ax.plot3D(X, Y, self.depth_matrix)
 
+
+# Helper functions #########################################################################################
 def lidar2pixel(lidar_points, R, T, K):
     # lidar_points assumed to be 4xn np array, each col should be (x, y, z, i)
     # R and T are (3, 3) and (3, )-like np arrays
@@ -327,6 +349,7 @@ def _get_struct_fmt(is_bigendian, fields, field_names=None):
 
     return fmt
 
+# ###############################################################################################################
 
 def main(args=None):
     rclpy.init(args=args)
