@@ -80,7 +80,7 @@ class FusionNode(Node):
         frame = self.frame.copy()
         # ################################
         
-        if frame != None:
+        if frame is not None:
             cone_detection_boxes = detect_cones(frame, self.cone_hsv_lb, self.cone_hsv_ub)
             
             # Draw circles for the lidar points
