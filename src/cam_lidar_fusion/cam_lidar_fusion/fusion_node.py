@@ -23,7 +23,14 @@ class FusionNode(Node):
         self.K = np.array([[1007.03765, 0, 693.05655], [0, 1007.59267, 356.9163], [0, 0, 1]])  # values for oak-d pro wide
         # Size of the img captured by the camera (equivalent to the size of the depth matrix)
         # self.img_size = (480, 640)  # values for webcam
-        self.img_size = (720, 1280)  # values for oak-d pro wide
+        self.img_size = [720, 1280]  # values for oak-d pro wide
+
+        # Webcam Video Capture #########################
+        # self.cap = cv2.VideoCapture(0)
+        # if not self.cap.isOpened():
+        #     print("Cannot open camera")
+        #     exit()
+        # ##############################################
 
         super().__init__('fusion_node')
         self.lidar_subs_ = self.create_subscription(
@@ -37,7 +44,7 @@ class FusionNode(Node):
 
         self.oak_d_cam_subs = self.create_subscription(
             Image,
-            '/color/image',
+            '/oak/rgb/image_raw',
             self.oak_d_cam_subs_callback,
             qos_profile_sensor_data
         )
@@ -48,17 +55,12 @@ class FusionNode(Node):
 
         self.fusion_img_pubs_ = self.create_publisher(Image, 'camera/fused_img', 10)
         self.bridge = CvBridge()
-
-        # Webcam Video Capture #########################
-        # self.cap = cv2.VideoCapture(0)
-        # if not self.cap.isOpened():
-        #     print("Cannot open camera")
-        #     exit()
-        # ##############################################
         
     def oak_d_cam_subs_callback(self, msg):
         try:
             self.frame = self.bridge.imgmsg_to_cv2(msg, "bgr8")
+            # self.img_size = self.frame.shape
+            print("setted img_size: ", self.img_size)
         except CvBridgeError as e:
             print(e)
 
