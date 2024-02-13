@@ -14,22 +14,24 @@ import cv2
 
 class FusionNode(Node):
     def __init__(self):
-        # Rotation from lidar to camera
-        self.R = np.array([[0, -1, 0], [0, 0, -1], [1, 0, 0]])
-        # lidar frame position seen from the camera's frame
-        self.T = np.array([0, 0.2, 0])
-        # K matrix from camera_calibration
-        # self.K = np.array([[543.892, 0, 308.268], [0, 537.865, 214.227], [0, 0, 1]])  # values for webcam
-        self.K = np.array([[1007.03765, 0, 693.05655], [0, 1007.59267, 356.9163], [0, 0, 1]])  # values for oak-d pro wide
-        # Size of the img captured by the camera (equivalent to the size of the depth matrix)
-        # self.img_size = (480, 640)  # values for webcam
-        self.img_size = [720, 1280]  # values for oak-d pro wide
+        self.R = np.array([[0, -1, 0], [0, 0, -1], [1, 0, 0]])  # Rotation from lidar to camera
+        self.T = np.array([0, 0.2, 0])  # lidar frame position seen from the camera's frame
+
+        # values for webcam #########################################################################################################
+        self.K = np.array([[543.892, 0, 308.268], [0, 537.865, 214.227], [0, 0, 1]])  # K matrix from camera_calibration
+        self.img_size = (480, 640)  # Size of the img captured by the camera
+        # ###########################################################################################################################
+
+        # values for oak-d pro wide #################################################################################################
+        # self.K = np.array([[1007.03765, 0, 693.05655], [0, 1007.59267, 356.9163], [0, 0, 1]])  # K matrix from camera_calibration
+        # self.img_size = [720, 1280]  # Size of the img captured by the camera
+        # ############################################################################################################################
 
         # Webcam Video Capture #########################
-        # self.cap = cv2.VideoCapture(0)
-        # if not self.cap.isOpened():
-        #     print("Cannot open camera")
-        #     exit()
+        self.cap = cv2.VideoCapture(0)
+        if not self.cap.isOpened():
+            print("Cannot open camera")
+            exit()
         # ##############################################
 
         super().__init__('fusion_node')
@@ -48,9 +50,9 @@ class FusionNode(Node):
             self.oak_d_cam_subs_callback,
             qos_profile_sensor_data
         )
-        self.frame = np.array([])
+        self.frame = None
         
-        self.cone_hsv_lb = np.array([127, 98, 131])  # hsv threshold lower bound for detecting cones
+        self.cone_hsv_lb = np.array([109, 83, 131])  # hsv threshold lower bound for detecting cones
         self.cone_hsv_ub = np.array([180, 255, 255])  # hsv threshold upper bound for detecting cones
 
         self.fusion_img_pubs_ = self.create_publisher(Image, 'camera/fused_img', 10)
@@ -78,14 +80,15 @@ class FusionNode(Node):
         # Visualization ####################################################################################
         # Choose between webcam and oak-d cam, remember to comment the VideoCapture in the __init__
         # Webcam #########################
-        # ret, frame = self.cap.read()
-        # if not ret:
-        #     print("Cannot receive frame")
-        # # cv2.imshow('frame', frame)
+        ret, frame = self.cap.read()
+        if not ret:
+            print("Cannot receive frame")
+        # cv2.imshow('frame', frame)
         # ################################
         
         # Oak-d cam ######################
-        frame = self.frame.copy()
+        # if self.frame is not None:
+        #     frame = self.frame.copy()
         # ################################
         
         if frame is not None:

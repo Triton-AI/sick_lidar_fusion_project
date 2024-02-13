@@ -50,7 +50,7 @@ while True:
         corners2 = cv2.cornerSubPix(gray_frame, corners, (11, 11), (-1, -1), criteria)
         imgpoints.append(corners2)
         # Draw and display the corners
-        cv2.drawChessboardCorners(frame, (cols, rows), corners2, ret)
+        cv2.drawChessboardCorners(frame, (cols, rows), corners2, found)
         cv2.imshow('frame', frame)
 
 cv2.destroyAllWindows()

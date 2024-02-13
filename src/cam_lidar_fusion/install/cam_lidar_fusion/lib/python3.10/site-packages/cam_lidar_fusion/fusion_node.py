@@ -14,6 +14,26 @@ import cv2
 
 class FusionNode(Node):
     def __init__(self):
+        self.R = np.array([[0, -1, 0], [0, 0, -1], [1, 0, 0]])  # Rotation from lidar to camera
+        self.T = np.array([0, 0.2, 0])  # lidar frame position seen from the camera's frame
+
+        # values for webcam #########################################################################################################
+        self.K = np.array([[543.892, 0, 308.268], [0, 537.865, 214.227], [0, 0, 1]])  # K matrix from camera_calibration
+        self.img_size = (480, 640)  # Size of the img captured by the camera
+        # ###########################################################################################################################
+
+        # values for oak-d pro wide #################################################################################################
+        # self.K = np.array([[1007.03765, 0, 693.05655], [0, 1007.59267, 356.9163], [0, 0, 1]])  # K matrix from camera_calibration
+        # self.img_size = [720, 1280]  # Size of the img captured by the camera
+        # ############################################################################################################################
+
+        # Webcam Video Capture #########################
+        self.cap = cv2.VideoCapture(0)
+        if not self.cap.isOpened():
+            print("Cannot open camera")
+            exit()
+        # ##############################################
+
         super().__init__('fusion_node')
         self.lidar_subs_ = self.create_subscription(
             PointCloud2,
@@ -26,32 +46,23 @@ class FusionNode(Node):
 
         self.oak_d_cam_subs = self.create_subscription(
             Image,
-            '/color/image',
+            '/oak/rgb/image_raw',
             self.oak_d_cam_subs_callback,
             qos_profile_sensor_data
         )
-        self.frame = np.array([])
-
-        self.R = np.array([[0, -1, 0], [0, 0, -1], [1, 0, 0]])  # Rotation from lidar to camera
-        self.T = np.array([0, 0.2, 0])  # lidar frame position seen from the camera's frame
-        self.K = np.array([[543.892, 0, 308.268], [0, 537.865, 214.227], [0, 0, 1]])  # K matrix from camera_calibration
-
-        self.cone_hsv_lb = np.array([127, 98, 131])  # hsv threshold lower bound for detecting cones
+        self.frame = None
+        
+        self.cone_hsv_lb = np.array([109, 83, 131])  # hsv threshold lower bound for detecting cones
         self.cone_hsv_ub = np.array([180, 255, 255])  # hsv threshold upper bound for detecting cones
 
         self.fusion_img_pubs_ = self.create_publisher(Image, 'camera/fused_img', 10)
         self.bridge = CvBridge()
-
-        # Webcam Video Capture #########################
-        # self.cap = cv2.VideoCapture(0)
-        # if not self.cap.isOpened():
-        #     print("Cannot open camera")
-        #     exit()
-        # ##############################################
         
     def oak_d_cam_subs_callback(self, msg):
         try:
             self.frame = self.bridge.imgmsg_to_cv2(msg, "bgr8")
+            # self.img_size = self.frame.shape
+            print("setted img_size: ", self.img_size)
         except CvBridgeError as e:
             print(e)
 
@@ -61,23 +72,23 @@ class FusionNode(Node):
         lidar_points = np.array(list(read_points(msg, skip_nans=True))).T  # 4xn matrix, (x,y,z,i)
         xs, ys, ps = lidar2pixel(lidar_points, self.R, self.T, self.K)
 
-        img_size = (480, 640)
-        filtered_x, filtered_y, filtered_p = filter_points(xs, ys, ps, img_size)
+        filtered_x, filtered_y, filtered_p = filter_points(xs, ys, ps, self.img_size)
 
-        self.depth_matrix = points_to_img(filtered_x, filtered_y, filtered_p, img_size)
+        self.depth_matrix = points_to_img(filtered_x, filtered_y, filtered_p, self.img_size)
         self.depth_matrix[self.depth_matrix == 0.0] = np.inf
 
         # Visualization ####################################################################################
         # Choose between webcam and oak-d cam, remember to comment the VideoCapture in the __init__
         # Webcam #########################
-        # ret, frame = self.cap.read()
-        # if not ret:
-        #     print("Cannot receive frame")
-        # # cv2.imshow('frame', frame)
+        ret, frame = self.cap.read()
+        if not ret:
+            print("Cannot receive frame")
+        # cv2.imshow('frame', frame)
         # ################################
         
         # Oak-d cam ######################
-        frame = self.frame.copy()
+        # if self.frame is not None:
+        #     frame = self.frame.copy()
         # ################################
         
         if frame is not None:
