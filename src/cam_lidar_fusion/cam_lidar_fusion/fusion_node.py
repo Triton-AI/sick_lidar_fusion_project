@@ -14,6 +14,17 @@ import cv2
 
 class FusionNode(Node):
     def __init__(self):
+        # Rotation from lidar to camera
+        self.R = np.array([[0, -1, 0], [0, 0, -1], [1, 0, 0]])
+        # lidar frame position seen from the camera's frame
+        self.T = np.array([0, 0.2, 0])
+        # K matrix from camera_calibration
+        # self.K = np.array([[543.892, 0, 308.268], [0, 537.865, 214.227], [0, 0, 1]])  # values for webcam
+        self.K = np.array([[1007.03765, 0, 693.05655], [0, 1007.59267, 356.9163], [0, 0, 1]])  # values for oak-d pro wide
+        # Size of the img captured by the camera (equivalent to the size of the depth matrix)
+        # self.img_size = (480, 640)  # values for webcam
+        self.img_size = (720, 1280)  # values for oak-d pro wide
+
         super().__init__('fusion_node')
         self.lidar_subs_ = self.create_subscription(
             PointCloud2,
@@ -31,11 +42,7 @@ class FusionNode(Node):
             qos_profile_sensor_data
         )
         self.frame = np.array([])
-
-        self.R = np.array([[0, -1, 0], [0, 0, -1], [1, 0, 0]])  # Rotation from lidar to camera
-        self.T = np.array([0, 0.2, 0])  # lidar frame position seen from the camera's frame
-        self.K = np.array([[543.892, 0, 308.268], [0, 537.865, 214.227], [0, 0, 1]])  # K matrix from camera_calibration
-
+        
         self.cone_hsv_lb = np.array([127, 98, 131])  # hsv threshold lower bound for detecting cones
         self.cone_hsv_ub = np.array([180, 255, 255])  # hsv threshold upper bound for detecting cones
 
@@ -61,10 +68,9 @@ class FusionNode(Node):
         lidar_points = np.array(list(read_points(msg, skip_nans=True))).T  # 4xn matrix, (x,y,z,i)
         xs, ys, ps = lidar2pixel(lidar_points, self.R, self.T, self.K)
 
-        img_size = (480, 640)
-        filtered_x, filtered_y, filtered_p = filter_points(xs, ys, ps, img_size)
+        filtered_x, filtered_y, filtered_p = filter_points(xs, ys, ps, self.img_size)
 
-        self.depth_matrix = points_to_img(filtered_x, filtered_y, filtered_p, img_size)
+        self.depth_matrix = points_to_img(filtered_x, filtered_y, filtered_p, self.img_size)
         self.depth_matrix[self.depth_matrix == 0.0] = np.inf
 
         # Visualization ####################################################################################
