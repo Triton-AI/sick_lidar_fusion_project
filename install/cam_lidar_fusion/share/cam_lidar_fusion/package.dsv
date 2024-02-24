@@ -1,6 +1,0 @@
-source;share/cam_lidar_fusion/hook/pythonpath.ps1
-source;share/cam_lidar_fusion/hook/pythonpath.dsv
-source;share/cam_lidar_fusion/hook/pythonpath.sh
-source;share/cam_lidar_fusion/hook/ament_prefix_path.ps1
-source;share/cam_lidar_fusion/hook/ament_prefix_path.dsv
-source;share/cam_lidar_fusion/hook/ament_prefix_path.sh
