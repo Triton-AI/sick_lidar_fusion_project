@@ -8,6 +8,7 @@ from rclpy.qos import qos_profile_sensor_data
 import numpy as np
 import matplotlib.pyplot as plt
 import cv2
+import depthai as dai
 
 # from cam_lidar_fusion.cone_detection import detect_cones
 
@@ -17,22 +18,29 @@ class FusionNode(Node):
         self.R = np.array([[0, -1, 0], [0, 0, -1], [1, 0, 0]])  # Rotation from lidar to camera
         self.T = np.array([0, 0.2, 0])  # lidar frame position seen from the camera's frame
 
-        # values for webcam #########################################################################################################
-        self.K = np.array([[543.892, 0, 308.268], [0, 537.865, 214.227], [0, 0, 1]])  # K matrix from camera_calibration
-        self.img_size = (480, 640)  # Size of the img captured by the camera
-        # ###########################################################################################################################
+        self.camera_type = "OAK_LR"  # WEBCAM, OAK_WIDE, OAK_LR
 
-        # values for oak-d pro wide #################################################################################################
-        # self.K = np.array([[1007.03765, 0, 693.05655], [0, 1007.59267, 356.9163], [0, 0, 1]])  # K matrix from camera_calibration
-        # self.img_size = [720, 1280]  # Size of the img captured by the camera
-        # ############################################################################################################################
-
-        # Webcam Video Capture #########################
-        self.cap = cv2.VideoCapture(0)
-        if not self.cap.isOpened():
-            print("Cannot open camera")
+        if self.camera_type == "WEBCAM":
+            # webcam #########################################################################################################
+            self.K = np.array([[543.892, 0, 308.268], [0, 537.865, 214.227], [0, 0, 1]])  # K matrix from camera_calibration
+            self.img_size = (480, 640)  # Size of the img captured by the camera
+            self.cap = cv2.VideoCapture(0)
+            if not self.cap.isOpened():
+                print("Cannot open webcam")
+                exit()
+        elif self.camera_type == "OAK_WIDE":
+            # oak-d pro wide #################################################################################################
+            self.K = np.array([[1007.03765, 0, 693.05655], [0, 1007.59267, 356.9163], [0, 0, 1]])  # K matrix from camera_calibration
+            self.img_size = [720, 1280]  # Size of the img captured by the camera
+            self.oak_q = get_oak_queue()
+        elif self.camera_type == "OAK_LR":
+            # oak-d LR ########################################################################################################
+            self.K = np.array([[1147.15312, 0., 936.61046], [0., 1133.707, 601.71022], [0, 0, 1]])
+            self.img_size = (1200, 1920)
+            self.oak_q = get_oak_queue()
+        else:
+            print("camera type not supported")
             exit()
-        # ##############################################
 
         super().__init__('fusion_node')
         self.lidar_subs_ = self.create_subscription(
@@ -80,16 +88,23 @@ class FusionNode(Node):
         # Visualization ####################################################################################
         # Choose between webcam and oak-d cam, remember to comment the VideoCapture in the __init__
         # Webcam #########################
-        ret, frame = self.cap.read()
-        if not ret:
-            print("Cannot receive frame")
+        # ret, frame = self.cap.read()
+        # if not ret:
+        #     print("Cannot receive frame")
         # # cv2.imshow('frame', frame)
         # ################################
         
-        # Oak-d cam ######################
+        # Oak-d cam (ros subscriber) ######################
         # if self.frame is not None:
         #     frame = self.frame.copy()
         # ################################
+        
+        if self.camera_type == "WEBCAM":
+            ret, frame = self.cap.read()
+        else:
+            in_q = self.oak_q.tryGet()
+            if in_q is not None:
+                frame = in_q.getCvFrame()
         
         if frame is not None:
             cone_detection_boxes = detect_cones(frame, self.cone_hsv_lb, self.cone_hsv_ub)
@@ -269,6 +284,22 @@ def detect_cones(frame, hsv_lb, hsv_ub):
     # cv2.imshow('cone detection result', img_res)
 
     return bounding_rects
+
+def get_oak_queue():
+    pipeline = dai.Pipeline()
+    cam_rgb = pipeline.create(dai.node.ColorCamera)
+    # cam_rgb.setPreviewSize(1448, 568)
+    cam_rgb.setBoardSocket(dai.CameraBoardSocket.CAM_A)
+    cam_rgb.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
+    cam_rgb.setInterleaved(False)
+    xout_rgb = pipeline.create(dai.node.XLinkOut)
+    xout_rgb.setStreamName("rgb")
+    cam_rgb.video.link(xout_rgb.input)
+
+    with dai.Device(pipeline) as device:
+        q_rgb = device.getOutputQueue(name='rgb', maxSize=1, blocking=False)
+        return q_rgb
+    
 
 ## The code below is "ported" from 
 # https://github.com/ros/common_msgs/tree/noetic-devel/sensor_msgs/src/sensor_msgs

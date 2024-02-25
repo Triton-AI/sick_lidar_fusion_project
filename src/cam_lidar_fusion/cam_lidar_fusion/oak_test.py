@@ -15,13 +15,13 @@ import depthai as dai
 
 pipeline = dai.Pipeline()
 cam_rgb = pipeline.create(dai.node.ColorCamera)
-cam_rgb.setPreviewSize(1448, 568)
+# cam_rgb.setPreviewSize(1448, 568)
 cam_rgb.setBoardSocket(dai.CameraBoardSocket.CAM_A)
 cam_rgb.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
 cam_rgb.setInterleaved(False)
 xout_rgb = pipeline.create(dai.node.XLinkOut)
 xout_rgb.setStreamName("rgb")
-cam_rgb.preview.link(xout_rgb.input)
+cam_rgb.video.link(xout_rgb.input)
 
 with dai.Device(pipeline) as device:
     q_rgb = device.getOutputQueue(name='rgb', maxSize=1, blocking=False)
@@ -36,3 +36,18 @@ with dai.Device(pipeline) as device:
             break
     
     cv2.destroyAllWindows()
+
+def get_oak_queue():
+    pipeline = dai.Pipeline()
+    cam_rgb = pipeline.create(dai.node.ColorCamera)
+    # cam_rgb.setPreviewSize(1448, 568)
+    cam_rgb.setBoardSocket(dai.CameraBoardSocket.CAM_A)
+    cam_rgb.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
+    cam_rgb.setInterleaved(False)
+    xout_rgb = pipeline.create(dai.node.XLinkOut)
+    xout_rgb.setStreamName("rgb")
+    cam_rgb.video.link(xout_rgb.input)
+
+    with dai.Device(pipeline) as device:
+        q_rgb = device.getOutputQueue(name='rgb', maxSize=1, blocking=False)
+        return q_rgb
