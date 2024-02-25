@@ -83,7 +83,7 @@ class FusionNode(Node):
         ret, frame = self.cap.read()
         if not ret:
             print("Cannot receive frame")
-        # cv2.imshow('frame', frame)
+        # # cv2.imshow('frame', frame)
         # ################################
         
         # Oak-d cam ######################
