@@ -5,7 +5,6 @@ import cv2  # opencv - display the video stream
 import depthai  # depthai - access the camera and its data packets
 
 # Oak-d Camera initialization #######################################################################3
-preview_res = (1448, 568)
 
 # Start defining a pipeline
 pipeline = depthai.Pipeline()
@@ -13,7 +12,6 @@ pipeline = depthai.Pipeline()
 # Define a source - color camera
 cam_rgb = pipeline.create(depthai.node.ColorCamera)
 # For the demo, just set a larger RGB preview size for OAK-D
-cam_rgb.setPreviewSize(preview_res[0], preview_res[1]) # FIX ME, need to match what ever pipeline we are using
 cam_rgb.setBoardSocket(depthai.CameraBoardSocket.RGB)
 cam_rgb.setResolution(depthai.ColorCameraProperties.SensorResolution.THE_1080_P)
 cam_rgb.setInterleaved(False)
@@ -21,7 +19,7 @@ cam_rgb.setInterleaved(False)
 # Create output
 xout_rgb = pipeline.create(depthai.node.XLinkOut)
 xout_rgb.setStreamName("rgb")
-cam_rgb.preview.link(xout_rgb.input)
+cam_rgb.video.link(xout_rgb.input)
 
 device = depthai.Device(pipeline)
 q_rgb = device.getOutputQueue("rgb")
