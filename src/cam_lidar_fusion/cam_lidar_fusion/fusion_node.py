@@ -16,7 +16,8 @@ import depthai as dai
 class FusionNode(Node):
     def __init__(self):
         self.R = np.array([[0, -1, 0], [0, 0, -1], [1, 0, 0]])  # Rotation from lidar to camera
-        self.T = np.array([0, 0.2, 0])  # lidar frame position seen from the camera's frame
+        # self.T = np.array([0, 0.2, 0])  # lidar frame position seen from the camera's frame
+        self.T = np.array([0, 0.1, 0])  # oak lr test
 
         self.camera_type = "OAK_LR"  # WEBCAM, OAK_WIDE, OAK_LR
 
@@ -32,12 +33,14 @@ class FusionNode(Node):
             # oak-d pro wide #################################################################################################
             self.K = np.array([[1007.03765, 0, 693.05655], [0, 1007.59267, 356.9163], [0, 0, 1]])  # K matrix from camera_calibration
             self.img_size = [720, 1280]  # Size of the img captured by the camera
-            self.oak_q = get_oak_queue()
+            pipeline = self.get_oak_pipeline()
+            self.device = dai.Device(pipeline)
         elif self.camera_type == "OAK_LR":
             # oak-d LR ########################################################################################################
             self.K = np.array([[1147.15312, 0., 936.61046], [0., 1133.707, 601.71022], [0, 0, 1]])
             self.img_size = (1200, 1920)
-            self.oak_q = get_oak_queue()
+            pipeline = self.get_oak_pipeline()
+            self.device = dai.Device(pipeline)
         else:
             print("camera type not supported")
             exit()
@@ -75,6 +78,7 @@ class FusionNode(Node):
             print(e)
 
     def lidar_subs_callback(self, msg):
+        frame = None
         max_dist_thresh = 10  # the max distance used for color coding in visualization window.
         # print("Received: ", msg.fields)  # Print the received message
         lidar_points = np.array(list(read_points(msg, skip_nans=True))).T  # 4xn matrix, (x,y,z,i)
@@ -102,9 +106,11 @@ class FusionNode(Node):
         if self.camera_type == "WEBCAM":
             ret, frame = self.cap.read()
         else:
-            in_q = self.oak_q.tryGet()
+            oak_q = self.device.getOutputQueue(name='rgb', maxSize=1, blocking=False)
+            in_q = oak_q.tryGet()
             if in_q is not None:
                 frame = in_q.getCvFrame()
+                # print("got frame")
         
         if frame is not None:
             cone_detection_boxes = detect_cones(frame, self.cone_hsv_lb, self.cone_hsv_ub)
@@ -142,6 +148,22 @@ class FusionNode(Node):
         # ax = plt.axes(projection='3d')
         # X, Y = np.meshgrid(np.arange(0, img_size[1], 1), np.arange(0, img_size[0], 1))
         # ax.plot3D(X, Y, self.depth_matrix)
+    
+    def get_oak_pipeline(self):
+        pipeline = dai.Pipeline()
+        cam_rgb = pipeline.create(dai.node.ColorCamera)
+        # cam_rgb.setPreviewSize(1448, 568)
+        cam_rgb.setBoardSocket(dai.CameraBoardSocket.CAM_A)
+        if self.camera_type == "OAK_LR":
+            cam_rgb.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1200_P)
+        elif self.camera_type == "OAK_WIDE":
+            cam_rgb.setResolution(dai.ColorCameraProperties.SensorResolution.THE_800_P)
+        cam_rgb.setInterleaved(False)
+        xout_rgb = pipeline.create(dai.node.XLinkOut)
+        xout_rgb.setStreamName("rgb")
+        cam_rgb.video.link(xout_rgb.input)
+
+        return pipeline
 
 
 # Helper functions #########################################################################################
@@ -285,20 +307,21 @@ def detect_cones(frame, hsv_lb, hsv_ub):
 
     return bounding_rects
 
-def get_oak_queue():
-    pipeline = dai.Pipeline()
-    cam_rgb = pipeline.create(dai.node.ColorCamera)
-    # cam_rgb.setPreviewSize(1448, 568)
-    cam_rgb.setBoardSocket(dai.CameraBoardSocket.CAM_A)
-    cam_rgb.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
-    cam_rgb.setInterleaved(False)
-    xout_rgb = pipeline.create(dai.node.XLinkOut)
-    xout_rgb.setStreamName("rgb")
-    cam_rgb.video.link(xout_rgb.input)
+# def get_oak_pipeline(res="1080P"):
+#     pipeline = dai.Pipeline()
+#     cam_rgb = pipeline.create(dai.node.ColorCamera)
+#     # cam_rgb.setPreviewSize(1448, 568)
+#     cam_rgb.setBoardSocket(dai.CameraBoardSocket.CAM_A)
+#     cam_rgb.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1200_P)
+#     cam_rgb.setInterleaved(False)
+#     xout_rgb = pipeline.create(dai.node.XLinkOut)
+#     xout_rgb.setStreamName("rgb")
+#     cam_rgb.video.link(xout_rgb.input)
 
-    with dai.Device(pipeline) as device:
-        q_rgb = device.getOutputQueue(name='rgb', maxSize=1, blocking=False)
-        return q_rgb
+#     # device = dai.Device(pipeline)
+#     # q_rgb = device.getOutputQueue(name='rgb', maxSize=1, blocking=False)
+#     # return q_rgb
+#     return pipeline
     
 
 ## The code below is "ported" from 

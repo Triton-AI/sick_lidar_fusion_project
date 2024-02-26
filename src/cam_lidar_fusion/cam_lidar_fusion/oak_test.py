@@ -23,19 +23,34 @@ xout_rgb = pipeline.create(dai.node.XLinkOut)
 xout_rgb.setStreamName("rgb")
 cam_rgb.video.link(xout_rgb.input)
 
-with dai.Device(pipeline) as device:
-    q_rgb = device.getOutputQueue(name='rgb', maxSize=1, blocking=False)
-    while True:
-        frame = q_rgb.tryGet()
-        if frame is not None:
-            cv_frame = frame.getCvFrame()
-            cv2.imshow('frame', cv_frame)
+# with dai.Device(pipeline) as device:
+#     q_rgb = device.getOutputQueue(name='rgb', maxSize=1, blocking=False)
+#     while True:
+#         frame = q_rgb.tryGet()
+#         if frame is not None:
+#             cv_frame = frame.getCvFrame()
+#             cv2.imshow('frame', cv_frame)
         
-        key = cv2.waitKey(30) & 0xFF
-        if key == ord('q'):
-            break
+#         key = cv2.waitKey(30) & 0xFF
+#         if key == ord('q'):
+#             break
     
-    cv2.destroyAllWindows()
+#     cv2.destroyAllWindows()
+
+device = dai.Device(pipeline)
+q_rgb = device.getOutputQueue(name='rgb', maxSize=1, blocking=False)
+while True:
+    frame = q_rgb.tryGet()
+    if frame is not None:
+        cv_frame = frame.getCvFrame()
+        cv2.imshow('frame', cv_frame)
+    
+    key = cv2.waitKey(30) & 0xFF
+    if key == ord('q'):
+        break
+
+cv2.destroyAllWindows()
+
 
 def get_oak_queue():
     pipeline = dai.Pipeline()
