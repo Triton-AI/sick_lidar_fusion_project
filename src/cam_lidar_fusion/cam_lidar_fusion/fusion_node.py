@@ -87,7 +87,6 @@ class FusionNode(Node):
         filtered_x, filtered_y, filtered_p = filter_points(xs, ys, ps, self.img_size)
 
         self.depth_matrix = points_to_img(filtered_x, filtered_y, filtered_p, self.img_size)
-        self.depth_matrix[self.depth_matrix == 0.0] = np.inf
 
         # Visualization ####################################################################################
         # Choose between webcam and oak-d cam, remember to comment the VideoCapture in the __init__
@@ -208,11 +207,21 @@ def filter_points(xs, ys, ps, img_size):
 
     return filtered_xy[:, 1], filtered_xy[:, 0], filtered_p  # return filtered_x, filtered_y, filtered_p
 
+"""
+Save the points (ps) into a matrix at their given locations,
+    locations where there's no given points will be saved as np.inf
+:param xs: list of x (col) locations for the points
+:param ys: list of y (row) locations for the points
+:param ps: values for the points
+:param size: (row, col) size of the matrix
+:return : result np matrix
+"""
 def points_to_img(xs, ys, ps, size):
     coords = np.stack((ys, xs))
     abs_coords = np.ravel_multi_index(coords, size)
     img = np.bincount(abs_coords, weights=ps, minlength=size[0]*size[1])
     img = img.reshape(size)
+    img[img == 0.0] = np.inf
     return img
 
 def convex_hull_pointing_up(ch):
