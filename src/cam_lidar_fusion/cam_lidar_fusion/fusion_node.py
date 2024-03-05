@@ -22,6 +22,8 @@ class FusionNode(Node):
 
         self.camera_type = "OAK_LR"  # WEBCAM, OAK_WIDE, OAK_LR
 
+        self.yolo_path = "obstacle_v2.pt"
+
         if self.camera_type == "WEBCAM":
             # webcam #########################################################################################################
             self.K = np.array([[543.892, 0, 308.268], [0, 537.865, 214.227], [0, 0, 1]])  # K matrix from camera_calibration
@@ -124,7 +126,7 @@ class FusionNode(Node):
             #     cv2.putText(frame, "Cone: " + str(round(cone_dist, 2)), (x, y-5), cv2.FONT_HERSHEY_COMPLEX, 1, 255)
             #     cv2.rectangle(frame, (x, y), (x+w, y+h), (1, 255, 1), 3)
             
-            xyxyn, confidence = yolo_predict(frame)
+            xyxyn, confidence = yolo_predict(frame, self.yolo_path)
             if xyxyn.any():
                 x1 = int(xyxyn[0] * self.img_size[1])
                 y1 = int(xyxyn[1] * self.img_size[0])
@@ -319,8 +321,8 @@ def detect_cones(frame, hsv_lb, hsv_ub):
 
     return bounding_rects
 
-def yolo_predict(img):
-    model = YOLO("obstacle_v2.pt")
+def yolo_predict(img, path):
+    model = YOLO(path)
     model.to(device='cuda')
     results = model.predict(source=img, save=False, save_txt=False)
 
