@@ -9,6 +9,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import cv2
 import depthai as dai
+from ultralytics import YOLO
 
 # from cam_lidar_fusion.cone_detection import detect_cones
 
@@ -89,18 +90,11 @@ class FusionNode(Node):
         self.depth_matrix = points_to_img(filtered_x, filtered_y, filtered_p, self.img_size)
 
         # Visualization ####################################################################################
-        # Choose between webcam and oak-d cam, remember to comment the VideoCapture in the __init__
-        # Webcam #########################
-        # ret, frame = self.cap.read()
-        # if not ret:
-        #     print("Cannot receive frame")
-        # # cv2.imshow('frame', frame)
-        # ################################
-        
+
         # Oak-d cam (ros subscriber) ######################
         # if self.frame is not None:
         #     frame = self.frame.copy()
-        # ################################
+        # #################################################
         
         if self.camera_type == "WEBCAM":
             ret, frame = self.cap.read()
@@ -112,24 +106,33 @@ class FusionNode(Node):
                 # print("got frame")
         
         if frame is not None:
-            cone_detection_boxes = detect_cones(frame, self.cone_hsv_lb, self.cone_hsv_ub)
-            
             # Draw circles for the lidar points
             for i in range(len(filtered_p)):
                 color_intensity = int((filtered_p[i] / max_dist_thresh * 255).clip(0, 255))
                 cv2.circle(frame, (filtered_x[i], filtered_y[i]), 4, (0,color_intensity, 255 - color_intensity), -1)
             
-            # Draw box for detected cones
-            # Print the lidar distance of the cone above the box
-            for box in cone_detection_boxes:
-                x = box[0]
-                y = box[1]
-                w = box[2]
-                h = box[3]
-                cone_dist = np.min(self.depth_matrix[y:y+h, x:x+w])
-                # print('cone dist: ', cone_dist)
-                cv2.putText(frame, "Cone: " + str(round(cone_dist, 2)), (x, y-5), cv2.FONT_HERSHEY_COMPLEX, 1, 255)
-                cv2.rectangle(frame, (x, y), (x+w, y+h), (1, 255, 1), 3)
+            # cone_detection_boxes = detect_cones(frame, self.cone_hsv_lb, self.cone_hsv_ub)
+            # # Draw box for detected cones
+            # # Print the lidar distance of the cone above the box
+            # for box in cone_detection_boxes:
+            #     x = box[0]
+            #     y = box[1]
+            #     w = box[2]
+            #     h = box[3]
+            #     cone_dist = np.min(self.depth_matrix[y:y+h, x:x+w])
+            #     # print('cone dist: ', cone_dist)
+            #     cv2.putText(frame, "Cone: " + str(round(cone_dist, 2)), (x, y-5), cv2.FONT_HERSHEY_COMPLEX, 1, 255)
+            #     cv2.rectangle(frame, (x, y), (x+w, y+h), (1, 255, 1), 3)
+            
+            xyxyn, confidence = yolo_predict(frame)
+            if xyxyn.any():
+                x1 = int(xyxyn[0] * self.img_size[1])
+                y1 = int(xyxyn[1] * self.img_size[0])
+                x2 = int(xyxyn[2] * self.img_size[1])
+                y2 = int(xyxyn[3] * self.img_size[0])
+                object_depth = np.min(self.depth_matrix[y1:y2, x1:x2])
+                cv2.rectangle(frame, (x1,y1), (x2,y2), (0,0,255), 3)
+                cv2.putText(frame, str(round(object_depth, 2)) + "m", (x1, y1-5), cv2.FONT_HERSHEY_COMPLEX, 1, 255)
             
             img_msg = self.bridge.cv2_to_imgmsg(frame, "bgr8")
             self.fusion_img_pubs_.publish(img_msg)
@@ -207,16 +210,16 @@ def filter_points(xs, ys, ps, img_size):
 
     return filtered_xy[:, 1], filtered_xy[:, 0], filtered_p  # return filtered_x, filtered_y, filtered_p
 
-"""
-Save the points (ps) into a matrix at their given locations,
-    locations where there's no given points will be saved as np.inf
-:param xs: list of x (col) locations for the points
-:param ys: list of y (row) locations for the points
-:param ps: values for the points
-:param size: (row, col) size of the matrix
-:return : result np matrix
-"""
 def points_to_img(xs, ys, ps, size):
+    """
+    Save the points (ps) into a matrix at their given locations,
+        locations where there's no given points will be saved as np.inf
+    :param xs: list of x (col) locations for the points
+    :param ys: list of y (row) locations for the points
+    :param ps: values for the points
+    :param size: (row, col) size of the matrix
+    :return : result np matrix
+    """
     coords = np.stack((ys, xs))
     abs_coords = np.ravel_multi_index(coords, size)
     img = np.bincount(abs_coords, weights=ps, minlength=size[0]*size[1])
@@ -316,22 +319,17 @@ def detect_cones(frame, hsv_lb, hsv_ub):
 
     return bounding_rects
 
-# def get_oak_pipeline(res="1080P"):
-#     pipeline = dai.Pipeline()
-#     cam_rgb = pipeline.create(dai.node.ColorCamera)
-#     # cam_rgb.setPreviewSize(1448, 568)
-#     cam_rgb.setBoardSocket(dai.CameraBoardSocket.CAM_A)
-#     cam_rgb.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1200_P)
-#     cam_rgb.setInterleaved(False)
-#     xout_rgb = pipeline.create(dai.node.XLinkOut)
-#     xout_rgb.setStreamName("rgb")
-#     cam_rgb.video.link(xout_rgb.input)
+def yolo_predict(img):
+    model = YOLO("obstacle_v2.pt")
+    model.to(device='cuda')
+    results = model.predict(source=img, save=False, save_txt=False)
 
-#     # device = dai.Device(pipeline)
-#     # q_rgb = device.getOutputQueue(name='rgb', maxSize=1, blocking=False)
-#     # return q_rgb
-#     return pipeline
-    
+    # bounding box params https://docs.ultralytics.com/modes/predict/#boxes
+    box = results[0].boxes.cpu()
+    xyxyn = box.xyxyn.numpy()
+    confidence = box.conf.numpy()
+
+    return xyxyn.reshape((-1,)), confidence
 
 ## The code below is "ported" from 
 # https://github.com/ros/common_msgs/tree/noetic-devel/sensor_msgs/src/sensor_msgs
