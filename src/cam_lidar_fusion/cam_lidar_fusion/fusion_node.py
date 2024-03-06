@@ -22,7 +22,8 @@ class FusionNode(Node):
 
         self.camera_type = "OAK_LR"  # WEBCAM, OAK_WIDE, OAK_LR
 
-        self.yolo_path = "obstacle_v2.pt"
+        self.yolo_model = YOLO("model/obstacle_v2.pt")
+        self.yolo_model.to(device='cuda')
 
         if self.camera_type == "WEBCAM":
             # webcam #########################################################################################################
@@ -126,12 +127,12 @@ class FusionNode(Node):
             #     cv2.putText(frame, "Cone: " + str(round(cone_dist, 2)), (x, y-5), cv2.FONT_HERSHEY_COMPLEX, 1, 255)
             #     cv2.rectangle(frame, (x, y), (x+w, y+h), (1, 255, 1), 3)
             
-            xyxyn, confidence = yolo_predict(frame, self.yolo_path)
-            if xyxyn.any():
-                x1 = int(xyxyn[0] * self.img_size[1])
-                y1 = int(xyxyn[1] * self.img_size[0])
-                x2 = int(xyxyn[2] * self.img_size[1])
-                y2 = int(xyxyn[3] * self.img_size[0])
+            detections_xyxyn = self.yolo_predict(frame)
+            for detection in detections_xyxyn:
+                x1 = int(detection[0] * self.img_size[1])
+                y1 = int(detection[1] * self.img_size[0])
+                x2 = int(detection[2] * self.img_size[1])
+                y2 = int(detection[3] * self.img_size[0])
                 object_depth = np.min(self.depth_matrix[y1:y2, x1:x2])
                 cv2.rectangle(frame, (x1,y1), (x2,y2), (0,0,255), 3)
                 cv2.putText(frame, str(round(object_depth, 2)) + "m", (x1, y1-5), cv2.FONT_HERSHEY_COMPLEX, 1, 255)
@@ -168,6 +169,17 @@ class FusionNode(Node):
         cam_rgb.video.link(xout_rgb.input)
 
         return pipeline
+    
+    def yolo_predict(self, img):
+        results = self.yolo_model.predict(source=img, save=False, save_txt=False)
+
+        # bounding box params https://docs.ultralytics.com/modes/predict/#boxes
+        box = results[0].boxes.cpu()
+        xyxyn = box.xyxyn.numpy().reshape((-1,))
+        detections_xyxyn = list(zip(*[iter(xyxyn)] * 4))
+        # confidence = box.conf.numpy()
+
+        return detections_xyxyn
 
 
 # Helper functions #########################################################################################
@@ -321,17 +333,6 @@ def detect_cones(frame, hsv_lb, hsv_ub):
 
     return bounding_rects
 
-def yolo_predict(img, path):
-    model = YOLO(path)
-    model.to(device='cuda')
-    results = model.predict(source=img, save=False, save_txt=False)
-
-    # bounding box params https://docs.ultralytics.com/modes/predict/#boxes
-    box = results[0].boxes.cpu()
-    xyxyn = box.xyxyn.numpy()
-    confidence = box.conf.numpy()
-
-    return xyxyn.reshape((-1,)), confidence
 
 ## The code below is "ported" from 
 # https://github.com/ros/common_msgs/tree/noetic-devel/sensor_msgs/src/sensor_msgs
