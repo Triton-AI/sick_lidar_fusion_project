@@ -21,6 +21,7 @@ class FusionNode(Node):
         self.T = np.array([0, 0.1, 0])  # oak lr test
 
         self.camera_type = "OAK_LR"  # WEBCAM, OAK_WIDE, OAK_LR
+        self.use_ROS_camera_topic = False  # use ROS subscriber to get camera images 
 
         self.yolo_model = YOLO("model/obstacle_v2.pt")
         self.yolo_model.to(device='cuda')
@@ -94,19 +95,18 @@ class FusionNode(Node):
 
         # Visualization ####################################################################################
 
-        # Oak-d cam (ros subscriber) ######################
-        # if self.frame is not None:
-        #     frame = self.frame.copy()
-        # #################################################
-        
-        if self.camera_type == "WEBCAM":
-            ret, frame = self.cap.read()
+        if self.use_ROS_camera_topic:  # use ROS subscriber for oak cameras
+            if self.frame is not None:
+                frame = self.frame.copy()
         else:
-            oak_q = self.device.getOutputQueue(name='rgb', maxSize=1, blocking=False)
-            in_q = oak_q.tryGet()
-            if in_q is not None:
-                frame = in_q.getCvFrame()
-                # print("got frame")
+            if self.camera_type == "WEBCAM":
+                ret, frame = self.cap.read()
+            else:  # using oak cameras
+                oak_q = self.device.getOutputQueue(name='rgb', maxSize=1, blocking=False)
+                in_q = oak_q.tryGet()
+                if in_q is not None:
+                    frame = in_q.getCvFrame()
+                    # print("got frame")
         
         if frame is not None:
             # Draw circles for the lidar points
