@@ -1,4 +1,6 @@
 from setuptools import find_packages, setup
+import os
+from glob import glob
 
 package_name = 'cam_lidar_fusion'
 
@@ -11,6 +13,7 @@ setup(
             ['resource/' + package_name]),
         ('share/' + package_name, ['package.xml']),
         ('lib/' + package_name, [package_name+'/cone_detection.py']),
+        (os.path.join(os.path.join("share", package_name), "model"), glob("model/*pt")),
     ],
     install_requires=['setuptools'],
     zip_safe=True,
