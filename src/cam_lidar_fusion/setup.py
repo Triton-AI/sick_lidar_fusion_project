@@ -7,13 +7,13 @@ package_name = 'cam_lidar_fusion'
 setup(
     name=package_name,
     version='0.0.0',
-    packages=find_packages(exclude=['test']),
+    packages=find_packages(exclude=['test', 'model']),
     data_files=[
         ('share/ament_index/resource_index/packages',
             ['resource/' + package_name]),
         ('share/' + package_name, ['package.xml']),
         ('lib/' + package_name, [package_name+'/cone_detection.py']),
-        (os.path.join(os.path.join("share", package_name), "model"), glob("model/*pt")),
+        (os.path.join(os.path.join("share", package_name), "model"), glob("model/*.pt")),
     ],
     install_requires=['setuptools'],
     zip_safe=True,

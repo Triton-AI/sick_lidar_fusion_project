@@ -11,6 +11,9 @@ import cv2
 import depthai as dai
 from ultralytics import YOLO
 
+from ament_index_python import get_package_share_directory
+import os
+
 # from cam_lidar_fusion.cone_detection import detect_cones
 
 
@@ -23,7 +26,10 @@ class FusionNode(Node):
         self.camera_type = "OAK_LR"  # WEBCAM, OAK_WIDE, OAK_LR
         self.use_ROS_camera_topic = False  # use ROS subscriber to get camera images 
 
-        self.yolo_model = YOLO("model/obstacle_v2.pt")
+        yolo_model_path = os.path.join(get_package_share_directory("cam_lidar_fusion"), "model/obstacle_v2.pt")
+
+        #self.yolo_model = YOLO("model/obstacle_v2.pt")
+        self.yolo_model = YOLO(yolo_model_path)
         self.yolo_model.to(device='cuda')
 
         if self.camera_type == "WEBCAM":
