@@ -26,7 +26,7 @@ class FusionNode(Node):
         self.camera_type = "OAK_LR"  # WEBCAM, OAK_WIDE, OAK_LR
         self.use_ROS_camera_topic = False  # use ROS subscriber to get camera images 
 
-        yolo_model_path = os.path.join(get_package_share_directory("cam_lidar_fusion"), "model/obstacle_v2.pt")
+        yolo_model_path = os.path.join(get_package_share_directory("cam_lidar_fusion"), "model/obstacle_v2_320.pt")
 
         #self.yolo_model = YOLO("model/obstacle_v2.pt")
         self.yolo_model = YOLO(yolo_model_path)
