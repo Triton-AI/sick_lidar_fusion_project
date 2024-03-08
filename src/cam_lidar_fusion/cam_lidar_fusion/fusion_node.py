@@ -21,12 +21,14 @@ class FusionNode(Node):
     def __init__(self):
         self.R = np.array([[0, -1, 0], [0, 0, -1], [1, 0, 0]])  # Rotation from lidar to camera
         # self.T = np.array([0, 0.2, 0])  # lidar frame position seen from the camera's frame
-        self.T = np.array([0, 0.1, 0])  # oak lr test
+        self.T = np.array([-0.02, 0.13, -0.015])  # oak lr test
 
         self.camera_type = "OAK_LR"  # WEBCAM, OAK_WIDE, OAK_LR
         self.use_ROS_camera_topic = False  # use ROS subscriber to get camera images 
 
-        yolo_model_path = os.path.join(get_package_share_directory("cam_lidar_fusion"), "model/obstacle_v2_320.pt")
+        # yolo_model_path = os.path.join(get_package_share_directory("cam_lidar_fusion"), "model/obstacle_v2_320.pt")
+        # yolo_model_path = os.path.join(get_package_share_directory("cam_lidar_fusion"), "model/shelf_picker_v2_320.pt")
+        yolo_model_path = os.path.join(get_package_share_directory("cam_lidar_fusion"), "model/cones_best.pt")
 
         #self.yolo_model = YOLO("model/obstacle_v2.pt")
         self.yolo_model = YOLO(yolo_model_path)
@@ -120,19 +122,6 @@ class FusionNode(Node):
                 color_intensity = int((filtered_p[i] / max_dist_thresh * 255).clip(0, 255))
                 cv2.circle(frame, (filtered_x[i], filtered_y[i]), 4, (0,color_intensity, 255 - color_intensity), -1)
             
-            # cone_detection_boxes = detect_cones(frame, self.cone_hsv_lb, self.cone_hsv_ub)
-            # # Draw box for detected cones
-            # # Print the lidar distance of the cone above the box
-            # for box in cone_detection_boxes:
-            #     x = box[0]
-            #     y = box[1]
-            #     w = box[2]
-            #     h = box[3]
-            #     cone_dist = np.min(self.depth_matrix[y:y+h, x:x+w])
-            #     # print('cone dist: ', cone_dist)
-            #     cv2.putText(frame, "Cone: " + str(round(cone_dist, 2)), (x, y-5), cv2.FONT_HERSHEY_COMPLEX, 1, 255)
-            #     cv2.rectangle(frame, (x, y), (x+w, y+h), (1, 255, 1), 3)
-            
             detections_xyxyn = self.yolo_predict(frame)
             for detection in detections_xyxyn:
                 x1 = int(detection[0] * self.img_size[1])
@@ -143,6 +132,26 @@ class FusionNode(Node):
                 cv2.rectangle(frame, (x1,y1), (x2,y2), (0,0,255), 3)
                 cv2.putText(frame, str(round(object_depth, 2)) + "m", (x1, y1-5), cv2.FONT_HERSHEY_COMPLEX, 1, 255)
             
+            # OpenCV detection ###############################################################################################
+            # cone_detection_boxes = detect_cones(frame, self.cone_hsv_lb, self.cone_hsv_ub)
+            # frame_cv_copy = frame.copy()
+            # # Draw box for detected cones
+            # # Print the lidar distance of the cone above the box
+            # for box in cone_detection_boxes:
+            #     x = box[0]
+            #     y = box[1]
+            #     w = box[2]
+            #     h = box[3]
+            #     cone_dist = np.min(self.depth_matrix[y:y+h, x:x+w])
+            #     # print('cone dist: ', cone_dist)
+            #     cv2.putText(frame_cv_copy, str(round(cone_dist, 2)) + "m", (x, y-5), cv2.FONT_HERSHEY_COMPLEX, 1, 255)
+            #     cv2.rectangle(frame_cv_copy, (x, y), (x+w, y+h), (1, 255, 1), 3)
+            # # cv2.imshow('OpenCV threshold detection: ', frame_cv_copy)
+            # ################################################################################################################
+
+            # cv2.imshow('YOLO detection: ', frame)
+            # cv2.waitKey(1)
+
             img_msg = self.bridge.cv2_to_imgmsg(frame, "bgr8")
             self.fusion_img_pubs_.publish(img_msg)
 
