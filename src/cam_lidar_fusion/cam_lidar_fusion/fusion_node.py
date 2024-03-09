@@ -8,7 +8,7 @@ from rclpy.qos import qos_profile_sensor_data
 import numpy as np
 import matplotlib.pyplot as plt
 import cv2
-import depthai as dai
+# import depthai as dai
 from ultralytics import YOLO
 
 from ament_index_python import get_package_share_directory
@@ -25,6 +25,7 @@ class FusionNode(Node):
 
         self.camera_type = "OAK_LR"  # WEBCAM, OAK_WIDE, OAK_LR
         self.use_ROS_camera_topic = False  # use ROS subscriber to get camera images
+        self.show_fusion_result_opencv = False  # use cv2.imshow to show the fusion result
 
         # yolo_model_path = os.path.join(get_package_share_directory("cam_lidar_fusion"), "model/obstacle_v2_320.pt")
         # yolo_model_path = os.path.join(get_package_share_directory("cam_lidar_fusion"), "model/shelf_picker_v2_320.pt")
@@ -36,6 +37,12 @@ class FusionNode(Node):
         except:
             print('cuda not avaliable, use cpu')
             self.yolo_model.to(device='cpu')
+
+        try:
+            import depthai as dai
+        except ImportError:
+            print('Cannot import depthai, set use_ROS_camera_topic to True')
+            self.use_ROS_camera_topic = True
 
         if self.camera_type == "WEBCAM":
             # webcam #########################################################################################################
@@ -154,8 +161,9 @@ class FusionNode(Node):
             # # cv2.imshow('OpenCV threshold detection: ', frame_cv_copy)
             # ################################################################################################################
 
-            # cv2.imshow('YOLO detection: ', frame)
-            # cv2.waitKey(1)
+            if self.show_fusion_result_opencv:
+                cv2.imshow('YOLO detection: ', frame)
+                cv2.waitKey(1)
 
             img_msg = self.bridge.cv2_to_imgmsg(frame, "bgr8")
             self.fusion_img_pubs_.publish(img_msg)
