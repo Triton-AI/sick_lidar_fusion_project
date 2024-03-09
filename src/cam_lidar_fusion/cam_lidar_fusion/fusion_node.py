@@ -24,15 +24,18 @@ class FusionNode(Node):
         self.T = np.array([-0.02, 0.13, -0.015])  # oak lr test
 
         self.camera_type = "OAK_LR"  # WEBCAM, OAK_WIDE, OAK_LR
-        self.use_ROS_camera_topic = False  # use ROS subscriber to get camera images 
+        self.use_ROS_camera_topic = False  # use ROS subscriber to get camera images
 
         # yolo_model_path = os.path.join(get_package_share_directory("cam_lidar_fusion"), "model/obstacle_v2_320.pt")
         # yolo_model_path = os.path.join(get_package_share_directory("cam_lidar_fusion"), "model/shelf_picker_v2_320.pt")
         yolo_model_path = os.path.join(get_package_share_directory("cam_lidar_fusion"), "model/cones_best.pt")
 
-        #self.yolo_model = YOLO("model/obstacle_v2.pt")
         self.yolo_model = YOLO(yolo_model_path)
-        self.yolo_model.to(device='cuda')
+        try:
+            self.yolo_model.to(device='cuda')
+        except:
+            print('cuda not avaliable, use cpu')
+            self.yolo_model.to(device='cpu')
 
         if self.camera_type == "WEBCAM":
             # webcam #########################################################################################################
@@ -46,14 +49,16 @@ class FusionNode(Node):
             # oak-d pro wide #################################################################################################
             self.K = np.array([[1007.03765, 0, 693.05655], [0, 1007.59267, 356.9163], [0, 0, 1]])  # K matrix from camera_calibration
             self.img_size = [720, 1280]  # Size of the img captured by the camera
-            pipeline = self.get_oak_pipeline()
-            self.device = dai.Device(pipeline)
+            if not self.use_ROS_camera_topic:
+                pipeline = self.get_oak_pipeline()
+                self.device = dai.Device(pipeline)
         elif self.camera_type == "OAK_LR":
             # oak-d LR ########################################################################################################
             self.K = np.array([[1147.15312, 0., 936.61046], [0., 1133.707, 601.71022], [0, 0, 1]])
             self.img_size = (1200, 1920)
-            pipeline = self.get_oak_pipeline()
-            self.device = dai.Device(pipeline)
+            if not self.use_ROS_camera_topic:
+                pipeline = self.get_oak_pipeline()
+                self.device = dai.Device(pipeline)
         else:
             print("camera type not supported")
             exit()
