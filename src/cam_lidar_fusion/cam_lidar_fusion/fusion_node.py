@@ -82,7 +82,7 @@ class FusionNode(Node):
 
         self.oak_d_cam_subs = self.create_subscription(
             Image,
-            '/oak/rgb/image_raw',
+            '/oak/rgb/image_rect',
             self.oak_d_cam_subs_callback,
             qos_profile_sensor_data
         )
