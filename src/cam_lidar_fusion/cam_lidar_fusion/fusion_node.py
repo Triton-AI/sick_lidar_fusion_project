@@ -28,8 +28,8 @@ class FusionNode(Node):
         self.show_fusion_result_opencv = False  # use cv2.imshow to show the fusion result
 
         # yolo_model_path = os.path.join(get_package_share_directory("cam_lidar_fusion"), "model/obstacle_v2_320.pt")
-        # yolo_model_path = os.path.join(get_package_share_directory("cam_lidar_fusion"), "model/shelf_picker_v2_320.pt")
-        yolo_model_path = os.path.join(get_package_share_directory("cam_lidar_fusion"), "model/cones_best.pt")
+        yolo_model_path = os.path.join(get_package_share_directory("cam_lidar_fusion"), "model/shelf_picker_robot_v2_320.pt")
+        # yolo_model_path = os.path.join(get_package_share_directory("cam_lidar_fusion"), "model/cones_best.pt")
 
         self.yolo_model = YOLO(yolo_model_path)
         try:
