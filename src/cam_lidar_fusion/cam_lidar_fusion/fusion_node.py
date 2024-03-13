@@ -30,9 +30,10 @@ class FusionNode(Node):
         self.use_ROS_camera_topic = False  # use ROS subscriber to get camera images
         self.show_fusion_result_opencv = False  # use cv2.imshow to show the fusion result
         self.run_yolo_on_camera = True
-        self.record_video = False
+        self.record_video = True
         self.video_file_name = 'test.avi'
 
+        # Config YOLO detection model path ###################################################################################################################
         if not self.run_yolo_on_camera:
             # yolo_model_path = os.path.join(get_package_share_directory("cam_lidar_fusion"), "model/obstacle_v2_320.pt")
             yolo_model_path = os.path.join(get_package_share_directory("cam_lidar_fusion"), "model/shelf_picker_robot_v2_320.pt")
@@ -49,9 +50,11 @@ class FusionNode(Node):
             self.yolo_model = os.path.join(get_package_share_directory("cam_lidar_fusion"), "blob_model/shelf_picker_robot_v2_320_openvino_2022.1_6shave.blob")
             # self.yolo_config = os.path.join(get_package_share_directory("cam_lidar_fusion"), "blob_model/obstacle_v2_320.json")
             # self.yolo_model = os.path.join(get_package_share_directory("cam_lidar_fusion"), "blob_model/obstacle_v2_320_openvino_2022.1_6shave.blob")
+        # #####################################################################################################################################################
 
+        # Config camera type, camera intrinsic matrix, size of the image (row, col) ###########################################################################
         if self.camera_type == "WEBCAM":
-            # webcam #########################################################################################################
+            # webcam ####################################################################
             self.K = np.array([[543.892, 0, 308.268], [0, 537.865, 214.227], [0, 0, 1]])  # K matrix from camera_calibration
             self.img_size = (480, 640)  # Size of the img captured by the camera
             self.cap = cv2.VideoCapture(0)
@@ -59,7 +62,7 @@ class FusionNode(Node):
                 print("Cannot open webcam")
                 exit()
         elif self.camera_type == "OAK_WIDE":
-            # oak-d pro wide #################################################################################################
+            # oak-d pro wide ############################################################
             self.K = np.array([[1007.03765, 0, 693.05655], [0, 1007.59267, 356.9163], [0, 0, 1]])  # K matrix from camera_calibration
             self.img_size = [720, 1280]  # Size of the img captured by the camera
             if not self.use_ROS_camera_topic:
@@ -70,7 +73,7 @@ class FusionNode(Node):
                     pipeline, self.img_size = self.get_oak_pipeline_with_nn()
                     self.device = dai.Device(pipeline)
         elif self.camera_type == "OAK_LR":
-            # oak-d LR ########################################################################################################
+            # oak-d LR #################################################################
             self.K = np.array([[1147.15312, 0., 936.61046], [0., 1133.707, 601.71022], [0, 0, 1]])
             self.img_size = [1200, 1920]
             if not self.use_ROS_camera_topic:
@@ -84,6 +87,7 @@ class FusionNode(Node):
         else:
             print("camera type not supported")
             exit()
+        # ###############################################################################################################################################
         
         if self.record_video:
             fourcc = cv2.VideoWriter_fourcc(*'XVID')
@@ -226,11 +230,13 @@ class FusionNode(Node):
         if self.camera_type == "OAK_LR":
             cam_rgb.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1200_P)
         elif self.camera_type == "OAK_WIDE":
-            cam_rgb.setResolution(dai.ColorCameraProperties.SensorResolution.THE_800_P)
+            cam_rgb.setResolution(dai.ColorCameraProperties.SensorResolution.THE_720_P)
         cam_rgb.setInterleaved(False)
         xout_rgb = pipeline.create(dai.node.XLinkOut)
         xout_rgb.setStreamName("rgb")
         cam_rgb.video.link(xout_rgb.input)
+
+        print("Set pipeline for OAK camera")
 
         return pipeline
     
@@ -286,8 +292,10 @@ class FusionNode(Node):
         # Properties
         camRgb.setPreviewSize(W, H)
         camRgb.setBoardSocket(dai.CameraBoardSocket.CAM_A)
-
-        camRgb.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
+        if self.camera_type == "OAK_LR":
+            camRgb.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1200_P)
+        elif self.camera_type == "OAK_WIDE":
+            camRgb.setResolution(dai.ColorCameraProperties.SensorResolution.THE_720_P)
         camRgb.setInterleaved(False)
         camRgb.setColorOrder(dai.ColorCameraProperties.ColorOrder.BGR)
         camRgb.setFps(40)
@@ -308,6 +316,8 @@ class FusionNode(Node):
         # camRgb.video.link(xoutRgb.input)
         detectionNetwork.passthrough.link(xoutRgb.input)
         detectionNetwork.out.link(nnOut.input)
+
+        print("Set pipeline for OAK camera with nn")
 
         return pipeline, (H, W)
     
