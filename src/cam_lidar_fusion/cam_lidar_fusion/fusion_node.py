@@ -30,6 +30,8 @@ class FusionNode(Node):
         self.use_ROS_camera_topic = False  # use ROS subscriber to get camera images
         self.show_fusion_result_opencv = False  # use cv2.imshow to show the fusion result
         self.run_yolo_on_camera = True
+        self.record_video = False
+        self.video_file_name = 'test.avi'
 
         if not self.run_yolo_on_camera:
             # yolo_model_path = os.path.join(get_package_share_directory("cam_lidar_fusion"), "model/obstacle_v2_320.pt")
@@ -65,12 +67,12 @@ class FusionNode(Node):
                     pipeline = self.get_oak_pipeline()
                     self.device = dai.Device(pipeline)
                 else:
-                    pipeline = self.get_oak_pipeline_with_nn()
+                    pipeline, self.img_size = self.get_oak_pipeline_with_nn()
                     self.device = dai.Device(pipeline)
         elif self.camera_type == "OAK_LR":
             # oak-d LR ########################################################################################################
             self.K = np.array([[1147.15312, 0., 936.61046], [0., 1133.707, 601.71022], [0, 0, 1]])
-            self.img_size = (1200, 1920)
+            self.img_size = [1200, 1920]
             if not self.use_ROS_camera_topic:
                 if not self.run_yolo_on_camera:
                     pipeline = self.get_oak_pipeline()
@@ -82,6 +84,10 @@ class FusionNode(Node):
         else:
             print("camera type not supported")
             exit()
+        
+        if self.record_video:
+            fourcc = cv2.VideoWriter_fourcc(*'XVID')
+            self.recording_out = cv2.VideoWriter(self.video_file_name, fourcc, 20.0, (self.img_size[1],  self.img_size[0]))
 
         super().__init__('fusion_node')
         self.lidar_subs_ = self.create_subscription(
@@ -189,6 +195,10 @@ class FusionNode(Node):
 
             if self.show_fusion_result_opencv:
                 cv2.imshow('YOLO detection: ', frame)
+                cv2.waitKey(1)
+
+            if self.record_video:
+                self.recording_out.write(frame)
                 cv2.waitKey(1)
 
             img_msg = self.bridge.cv2_to_imgmsg(frame, "bgr8")
