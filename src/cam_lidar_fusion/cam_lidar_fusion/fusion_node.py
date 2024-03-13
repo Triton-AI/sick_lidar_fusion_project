@@ -43,7 +43,7 @@ class FusionNode(Node):
                 print('cuda not avaliable, use cpu')
                 self.yolo_model.to(device='cpu')
         else:
-            self.yolo_config = os.path.join(get_package_share_directory("cam_lidar_fusion"), "blob_model/self_picker_robot_v2_320.json")
+            self.yolo_config = os.path.join(get_package_share_directory("cam_lidar_fusion"), "blob_model/shelf_picker_robot_v2_320.json")
             self.yolo_model = os.path.join(get_package_share_directory("cam_lidar_fusion"), "blob_model/shelf_picker_robot_v2_320_openvino_2022.1_6shave.blob")
             # self.yolo_config = os.path.join(get_package_share_directory("cam_lidar_fusion"), "blob_model/obstacle_v2_320.json")
             # self.yolo_model = os.path.join(get_package_share_directory("cam_lidar_fusion"), "blob_model/obstacle_v2_320_openvino_2022.1_6shave.blob")
