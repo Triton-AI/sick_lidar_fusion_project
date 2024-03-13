@@ -61,15 +61,24 @@ class FusionNode(Node):
             self.K = np.array([[1007.03765, 0, 693.05655], [0, 1007.59267, 356.9163], [0, 0, 1]])  # K matrix from camera_calibration
             self.img_size = [720, 1280]  # Size of the img captured by the camera
             if not self.use_ROS_camera_topic:
-                pipeline = self.get_oak_pipeline()
-                self.device = dai.Device(pipeline)
+                if not self.run_yolo_on_camera:
+                    pipeline = self.get_oak_pipeline()
+                    self.device = dai.Device(pipeline)
+                else:
+                    pipeline = self.get_oak_pipeline_with_nn()
+                    self.device = dai.Device(pipeline)
         elif self.camera_type == "OAK_LR":
             # oak-d LR ########################################################################################################
             self.K = np.array([[1147.15312, 0., 936.61046], [0., 1133.707, 601.71022], [0, 0, 1]])
             self.img_size = (1200, 1920)
             if not self.use_ROS_camera_topic:
-                pipeline = self.get_oak_pipeline()
-                self.device = dai.Device(pipeline)
+                if not self.run_yolo_on_camera:
+                    pipeline = self.get_oak_pipeline()
+                    self.device = dai.Device(pipeline)
+                else:
+                    self.K = np.array([[357.60759842, 0., 161.29415866], [0., 356.51492723, 154.07382818], [0., 0., 1.]])
+                    pipeline, self.img_size = self.get_oak_pipeline_with_nn()
+                    self.device = dai.Device(pipeline)
         else:
             print("camera type not supported")
             exit()
@@ -290,7 +299,7 @@ class FusionNode(Node):
         detectionNetwork.passthrough.link(xoutRgb.input)
         detectionNetwork.out.link(nnOut.input)
 
-        return pipeline
+        return pipeline, (H, W)
     
     def yolo_predict(self, img):
         results = self.yolo_model.predict(source=img, save=False, save_txt=False)
