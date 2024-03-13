@@ -14,6 +14,7 @@ setup(
         ('share/' + package_name, ['package.xml']),
         ('lib/' + package_name, [package_name+'/cone_detection.py']),
         (os.path.join(os.path.join("share", package_name), "model"), glob("model/*.pt")),
+        (os.path.join(os.path.join("share", package_name), "blob_model"), glob("blob_model/*")),
     ],
     install_requires=['setuptools'],
     zip_safe=True,

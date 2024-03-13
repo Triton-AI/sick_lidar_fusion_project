@@ -8,11 +8,14 @@ from rclpy.qos import qos_profile_sensor_data
 import numpy as np
 import matplotlib.pyplot as plt
 import cv2
-# import depthai as dai
+import depthai as dai
 from ultralytics import YOLO
 
 from ament_index_python import get_package_share_directory
 import os
+import json
+from pathlib import Path
+import blobconverter
 
 # from cam_lidar_fusion.cone_detection import detect_cones
 
@@ -26,23 +29,24 @@ class FusionNode(Node):
         self.camera_type = "OAK_LR"  # WEBCAM, OAK_WIDE, OAK_LR
         self.use_ROS_camera_topic = False  # use ROS subscriber to get camera images
         self.show_fusion_result_opencv = False  # use cv2.imshow to show the fusion result
+        self.run_yolo_on_camera = True
 
-        # yolo_model_path = os.path.join(get_package_share_directory("cam_lidar_fusion"), "model/obstacle_v2_320.pt")
-        yolo_model_path = os.path.join(get_package_share_directory("cam_lidar_fusion"), "model/shelf_picker_robot_v2_320.pt")
-        # yolo_model_path = os.path.join(get_package_share_directory("cam_lidar_fusion"), "model/cones_best.pt")
+        if not self.run_yolo_on_camera:
+            # yolo_model_path = os.path.join(get_package_share_directory("cam_lidar_fusion"), "model/obstacle_v2_320.pt")
+            yolo_model_path = os.path.join(get_package_share_directory("cam_lidar_fusion"), "model/shelf_picker_robot_v2_320.pt")
+            # yolo_model_path = os.path.join(get_package_share_directory("cam_lidar_fusion"), "model/cones_best.pt")
 
-        self.yolo_model = YOLO(yolo_model_path)
-        try:
-            self.yolo_model.to(device='cuda')
-        except:
-            print('cuda not avaliable, use cpu')
-            self.yolo_model.to(device='cpu')
-
-        try:
-            import depthai as dai
-        except ImportError:
-            print('Cannot import depthai, set use_ROS_camera_topic to True')
-            self.use_ROS_camera_topic = True
+            self.yolo_model = YOLO(yolo_model_path)
+            try:
+                self.yolo_model.to(device='cuda')
+            except:
+                print('cuda not avaliable, use cpu')
+                self.yolo_model.to(device='cpu')
+        else:
+            self.yolo_config = os.path.join(get_package_share_directory("cam_lidar_fusion"), "blob_model/self_picker_robot_v2_320.json")
+            self.yolo_model = os.path.join(get_package_share_directory("cam_lidar_fusion"), "blob_model/shelf_picker_robot_v2_320_openvino_2022.1_6shave.blob")
+            # self.yolo_config = os.path.join(get_package_share_directory("cam_lidar_fusion"), "blob_model/obstacle_v2_320.json")
+            # self.yolo_model = os.path.join(get_package_share_directory("cam_lidar_fusion"), "blob_model/obstacle_v2_320_openvino_2022.1_6shave.blob")
 
         if self.camera_type == "WEBCAM":
             # webcam #########################################################################################################
@@ -124,6 +128,9 @@ class FusionNode(Node):
             else:  # using oak cameras
                 oak_q = self.device.getOutputQueue(name='rgb', maxSize=1, blocking=False)
                 in_q = oak_q.tryGet()
+                if self.run_yolo_on_camera:
+                    q_nn = self.device.getOutputQueue(name='nn', maxSize=4, blocking=False)
+                    in_nn = q_nn.get()
                 if in_q is not None:
                     frame = in_q.getCvFrame()
                     # print("got frame")
@@ -134,15 +141,25 @@ class FusionNode(Node):
                 color_intensity = int((filtered_p[i] / max_dist_thresh * 255).clip(0, 255))
                 cv2.circle(frame, (filtered_x[i], filtered_y[i]), 4, (0,color_intensity, 255 - color_intensity), -1)
             
-            detections_xyxyn = self.yolo_predict(frame)
-            for detection in detections_xyxyn:
-                x1 = int(detection[0] * self.img_size[1])
-                y1 = int(detection[1] * self.img_size[0])
-                x2 = int(detection[2] * self.img_size[1])
-                y2 = int(detection[3] * self.img_size[0])
-                object_depth = np.min(self.depth_matrix[y1:y2, x1:x2])
-                cv2.rectangle(frame, (x1,y1), (x2,y2), (0,0,255), 3)
-                cv2.putText(frame, str(round(object_depth, 2)) + "m", (x1, y1-5), cv2.FONT_HERSHEY_COMPLEX, 1, 255)
+            if not self.run_yolo_on_camera:
+                detections_xyxyn = self.yolo_predict(frame)
+                for detection in detections_xyxyn:
+                    x1 = int(detection[0] * self.img_size[1])
+                    y1 = int(detection[1] * self.img_size[0])
+                    x2 = int(detection[2] * self.img_size[1])
+                    y2 = int(detection[3] * self.img_size[0])
+                    object_depth = np.min(self.depth_matrix[y1:y2, x1:x2])
+                    cv2.rectangle(frame, (x1,y1), (x2,y2), (0,0,255), 3)
+                    cv2.putText(frame, str(round(object_depth, 2)) + "m", (x1, y1-5), cv2.FONT_HERSHEY_COMPLEX, 1, 255)
+            else:
+                if in_nn is not None:
+                    detections = in_nn.detections
+                    for detection in detections:
+                        [x1,y1,x2,y2] = frameNorm(frame, (detection.xmin, detection.ymin, detection.xmax, detection.ymax))
+                        # cv2.putText(frame, labels[detection.label], (bbox[0] + 10, bbox[1] + 20), cv2.FONT_HERSHEY_TRIPLEX, 0.5, 255)
+                        object_depth = np.min(self.depth_matrix[y1:y2, x1:x2])
+                        cv2.rectangle(frame, (x1, y1), (x2, y2), (0,0,255), 2)
+                        cv2.putText(frame, str(round(object_depth, 2)) + "m", (x1, y1-5), cv2.FONT_HERSHEY_COMPLEX, 1, 255)
             
             # OpenCV detection ###############################################################################################
             # cone_detection_boxes = detect_cones(frame, self.cone_hsv_lb, self.cone_hsv_ub)
@@ -195,6 +212,83 @@ class FusionNode(Node):
         xout_rgb = pipeline.create(dai.node.XLinkOut)
         xout_rgb.setStreamName("rgb")
         cam_rgb.video.link(xout_rgb.input)
+
+        return pipeline
+    
+    def get_oak_pipeline_with_nn(self):
+        # parse config
+        configPath = Path(self.yolo_config)
+        if not configPath.exists():
+            raise ValueError("Path {} does not exist!".format(configPath))
+
+        with configPath.open() as f:
+            config = json.load(f)
+        nnConfig = config.get("nn_config", {})
+
+        # parse input shape
+        if "input_size" in nnConfig:
+            W, H = tuple(map(int, nnConfig.get("input_size").split('x')))
+
+        # extract metadata
+        metadata = nnConfig.get("NN_specific_metadata", {})
+        classes = metadata.get("classes", {})
+        coordinates = metadata.get("coordinates", {})
+        anchors = metadata.get("anchors", {})
+        anchorMasks = metadata.get("anchor_masks", {})
+        iouThreshold = metadata.get("iou_threshold", {})
+        confidenceThreshold = metadata.get("confidence_threshold", {})
+
+        print(metadata)
+
+        # parse labels
+        nnMappings = config.get("mappings", {})
+        self.labels = nnMappings.get("labels", {})
+
+        # get model path
+        nnPath = self.yolo_model
+        if not Path(nnPath).exists():
+            print("No blob found at {}. Looking into DepthAI model zoo.".format(nnPath))
+            nnPath = str(blobconverter.from_zoo(self.yolo_model, shaves = 6, zoo_type = "depthai", use_cache=True))
+        # sync outputs
+        syncNN = True
+
+        # Create pipeline
+        pipeline = dai.Pipeline()
+
+        # Define sources and outputs
+        camRgb = pipeline.create(dai.node.ColorCamera)
+        detectionNetwork = pipeline.create(dai.node.YoloDetectionNetwork)
+        xoutRgb = pipeline.create(dai.node.XLinkOut)
+        nnOut = pipeline.create(dai.node.XLinkOut)
+
+        xoutRgb.setStreamName("rgb")
+        nnOut.setStreamName("nn")
+
+        # Properties
+        camRgb.setPreviewSize(W, H)
+        camRgb.setBoardSocket(dai.CameraBoardSocket.CAM_A)
+
+        camRgb.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
+        camRgb.setInterleaved(False)
+        camRgb.setColorOrder(dai.ColorCameraProperties.ColorOrder.BGR)
+        camRgb.setFps(40)
+
+        # Network specific settings
+        detectionNetwork.setConfidenceThreshold(confidenceThreshold)
+        detectionNetwork.setNumClasses(classes)
+        detectionNetwork.setCoordinateSize(coordinates)
+        detectionNetwork.setAnchors(anchors)
+        detectionNetwork.setAnchorMasks(anchorMasks)
+        detectionNetwork.setIouThreshold(iouThreshold)
+        detectionNetwork.setBlobPath(nnPath)
+        detectionNetwork.setNumInferenceThreads(2)
+        detectionNetwork.input.setBlocking(False)
+
+        # Linking
+        camRgb.preview.link(detectionNetwork.input)
+        # camRgb.video.link(xoutRgb.input)
+        detectionNetwork.passthrough.link(xoutRgb.input)
+        detectionNetwork.out.link(nnOut.input)
 
         return pipeline
     
@@ -361,6 +455,10 @@ def detect_cones(frame, hsv_lb, hsv_ub):
 
     return bounding_rects
 
+def frameNorm(frame, bbox):
+    normVals = np.full(len(bbox), frame.shape[0])
+    normVals[::2] = frame.shape[1]
+    return (np.clip(np.array(bbox), 0, 1) * normVals).astype(int)
 
 ## The code below is "ported" from 
 # https://github.com/ros/common_msgs/tree/noetic-devel/sensor_msgs/src/sensor_msgs
