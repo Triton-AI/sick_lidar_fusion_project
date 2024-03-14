@@ -37,7 +37,7 @@ class FusionNode(Node):
         # Config YOLO detection model path ###################################################################################################################
         if not self.run_yolo_on_camera:
             # yolo_model_path = os.path.join(get_package_share_directory("cam_lidar_fusion"), "model/obstacle_v2_320.pt")
-            yolo_model_path = os.path.join(get_package_share_directory("cam_lidar_fusion"), "model/shelf_picker_robot_v2_320.pt")
+            yolo_model_path = os.path.join(get_package_share_directory("cam_lidar_fusion"), "model/shelf_picker_robot_v4_320.pt")
             # yolo_model_path = os.path.join(get_package_share_directory("cam_lidar_fusion"), "model/cones_best.pt")
 
             self.yolo_model = YOLO(yolo_model_path)
@@ -47,8 +47,8 @@ class FusionNode(Node):
                 print('cuda not avaliable, use cpu')
                 self.yolo_model.to(device='cpu')
         else:
-            self.yolo_config = os.path.join(get_package_share_directory("cam_lidar_fusion"), "blob_model/shelf_picker_v3_320.json")
-            self.yolo_model = os.path.join(get_package_share_directory("cam_lidar_fusion"), "blob_model/shelf_picker_v3_320_openvino_2022.1_6shave.blob")
+            self.yolo_config = os.path.join(get_package_share_directory("cam_lidar_fusion"), "blob_model/shelf_picker_v4_320.json")
+            self.yolo_model = os.path.join(get_package_share_directory("cam_lidar_fusion"), "blob_model/shelf_picker_v4_320_openvino_2022.1_6shave.blob")
             # self.yolo_config = os.path.join(get_package_share_directory("cam_lidar_fusion"), "blob_model/obstacle_v2_320.json")
             # self.yolo_model = os.path.join(get_package_share_directory("cam_lidar_fusion"), "blob_model/obstacle_v2_320_openvino_2022.1_6shave.blob")
         # #####################################################################################################################################################
@@ -156,12 +156,6 @@ class FusionNode(Node):
                     # print("got frame")
         
         if frame is not None:
-            # Draw circles for the lidar points
-            if self.show_lidar_projections:
-                for i in range(len(filtered_p)):
-                    color_intensity = int((filtered_p[i] / max_dist_thresh * 255).clip(0, 255))
-                    cv2.circle(frame, (filtered_x[i], filtered_y[i]), 1, (0,color_intensity, 255 - color_intensity), -1)
-            
             if not self.run_yolo_on_camera:
                 detections_xyxyn = self.yolo_predict(frame)
                 for detection in detections_xyxyn:
@@ -198,6 +192,12 @@ class FusionNode(Node):
             #     cv2.rectangle(frame_cv_copy, (x, y), (x+w, y+h), (1, 255, 1), 3)
             # # cv2.imshow('OpenCV threshold detection: ', frame_cv_copy)
             # ################################################################################################################
+
+            # Draw circles for the lidar points
+            if self.show_lidar_projections:
+                for i in range(len(filtered_p)):
+                    color_intensity = int((filtered_p[i] / max_dist_thresh * 255).clip(0, 255))
+                    cv2.circle(frame, (filtered_x[i], filtered_y[i]), 1, (0,color_intensity, 255 - color_intensity), -1)
 
             if self.show_fusion_result_opencv:
                 cv2.imshow('YOLO detection: ', frame)
