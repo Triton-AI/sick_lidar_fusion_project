@@ -18,8 +18,8 @@
     },
     "mappings": {
         "labels": [
-            "Robot",
-            "People"
+            "People",
+            "Robot"
         ]
     },
     "version": 1
