@@ -32,6 +32,7 @@ class FusionNode(Node):
         self.run_yolo_on_camera = True
         self.record_video = True
         self.video_file_name = 'test.avi'
+        self.show_lidar_projections = True
 
         # Config YOLO detection model path ###################################################################################################################
         if not self.run_yolo_on_camera:
@@ -156,9 +157,10 @@ class FusionNode(Node):
         
         if frame is not None:
             # Draw circles for the lidar points
-            for i in range(len(filtered_p)):
-                color_intensity = int((filtered_p[i] / max_dist_thresh * 255).clip(0, 255))
-                cv2.circle(frame, (filtered_x[i], filtered_y[i]), 4, (0,color_intensity, 255 - color_intensity), -1)
+            if self.show_lidar_projections:
+                for i in range(len(filtered_p)):
+                    color_intensity = int((filtered_p[i] / max_dist_thresh * 255).clip(0, 255))
+                    cv2.circle(frame, (filtered_x[i], filtered_y[i]), 4, (0,color_intensity, 255 - color_intensity), -1)
             
             if not self.run_yolo_on_camera:
                 detections_xyxyn = self.yolo_predict(frame)
