@@ -160,7 +160,7 @@ class FusionNode(Node):
             if self.show_lidar_projections:
                 for i in range(len(filtered_p)):
                     color_intensity = int((filtered_p[i] / max_dist_thresh * 255).clip(0, 255))
-                    cv2.circle(frame, (filtered_x[i], filtered_y[i]), 4, (0,color_intensity, 255 - color_intensity), -1)
+                    cv2.circle(frame, (filtered_x[i], filtered_y[i]), 1, (0,color_intensity, 255 - color_intensity), -1)
             
             if not self.run_yolo_on_camera:
                 detections_xyxyn = self.yolo_predict(frame)
