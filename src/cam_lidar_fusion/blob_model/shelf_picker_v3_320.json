@@ -13,13 +13,13 @@
             "anchors": [],
             "anchor_masks": {},
             "iou_threshold": 0.5,
-            "confidence_threshold": 0.5
+            "confidence_threshold": 0.4
         }
     },
     "mappings": {
         "labels": [
-            "Class_0",
-            "Class_1"
+            "Robot",
+            "People"
         ]
     },
     "version": 1

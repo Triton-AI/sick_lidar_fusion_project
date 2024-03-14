@@ -175,7 +175,7 @@ class FusionNode(Node):
                     detections = in_nn.detections
                     for detection in detections:
                         [x1,y1,x2,y2] = frameNorm(frame, (detection.xmin, detection.ymin, detection.xmax, detection.ymax))
-                        # cv2.putText(frame, labels[detection.label], (bbox[0] + 10, bbox[1] + 20), cv2.FONT_HERSHEY_TRIPLEX, 0.5, 255)
+                        cv2.putText(frame, self.labels[detection.label], (x1 + 10, y1 + 20), cv2.FONT_HERSHEY_TRIPLEX, 0.5, 255)
                         object_depth = np.min(self.depth_matrix[y1:y2, x1:x2])
                         cv2.rectangle(frame, (x1, y1), (x2, y2), (0,0,255), 2)
                         cv2.putText(frame, str(round(object_depth, 2)) + "m", (x1, y1-5), cv2.FONT_HERSHEY_COMPLEX, 1, 255)
