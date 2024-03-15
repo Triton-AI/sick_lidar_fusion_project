@@ -12,8 +12,8 @@
             "coordinates": 4,
             "anchors": [],
             "anchor_masks": {},
-            "iou_threshold": 0.6,
-            "confidence_threshold": 0.5
+            "iou_threshold": 0.5,
+            "confidence_threshold": 0.6
         }
     },
     "mappings": {
