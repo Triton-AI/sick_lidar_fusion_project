@@ -51,6 +51,8 @@ class FusionNode(Node):
             self.yolo_model = os.path.join(get_package_share_directory("cam_lidar_fusion"), "blob_model/shelf_picker_v3_320_openvino_2022.1_6shave.blob")
             # self.yolo_config = os.path.join(get_package_share_directory("cam_lidar_fusion"), "blob_model/obstacle_v2_320.json")
             # self.yolo_model = os.path.join(get_package_share_directory("cam_lidar_fusion"), "blob_model/obstacle_v2_320_openvino_2022.1_6shave.blob")
+            self.yolo_config = os.path.join(get_package_share_directory("cam_lidar_fusion"), "blob_model/vow_v1_320.json")
+            self.yolo_model = os.path.join(get_package_share_directory("cam_lidar_fusion"), "blob_model/cow_v1_openvino_2022.1_6shave.blob")
         # #####################################################################################################################################################
 
         # Config camera type, camera intrinsic matrix, size of the image (row, col) ###########################################################################
