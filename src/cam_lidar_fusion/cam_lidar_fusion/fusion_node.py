@@ -27,17 +27,18 @@ class FusionNode(Node):
         self.T = np.array([-0.02, 0.13, -0.015])  # oak lr test
 
         self.camera_type = "OAK_LR"  # WEBCAM, OAK_WIDE, OAK_LR
+        self.show_lidar_projections = True  # whether or not to draw lidar points on the output image
+        self.lidar_projections_size = 2  # radius of the lidar points on the image
         self.use_ROS_camera_topic = False  # use ROS subscriber to get camera images
         self.show_fusion_result_opencv = False  # use cv2.imshow to show the fusion result
-        self.run_yolo_on_camera = True
-        self.record_video = True
-        self.video_file_name = 'test.avi'
-        self.show_lidar_projections = True
+        self.run_yolo_on_camera = True  # Only for OAK cameras, run the YOLO detection model on camera or not
+        self.record_video = True  # whether record a video or not
+        self.video_file_name = 'test.avi'  # name of the video being recorded
 
         # Config YOLO detection model path ###################################################################################################################
         if not self.run_yolo_on_camera:
             # yolo_model_path = os.path.join(get_package_share_directory("cam_lidar_fusion"), "model/obstacle_v2_320.pt")
-            yolo_model_path = os.path.join(get_package_share_directory("cam_lidar_fusion"), "model/shelf_picker_robot_v4_320.pt")
+            yolo_model_path = os.path.join(get_package_share_directory("cam_lidar_fusion"), "model/shelf_picker_v4_320.pt")
             # yolo_model_path = os.path.join(get_package_share_directory("cam_lidar_fusion"), "model/cones_best.pt")
 
             self.yolo_model = YOLO(yolo_model_path)
@@ -47,12 +48,12 @@ class FusionNode(Node):
                 print('cuda not avaliable, use cpu')
                 self.yolo_model.to(device='cpu')
         else:
-            self.yolo_config = os.path.join(get_package_share_directory("cam_lidar_fusion"), "blob_model/shelf_picker_v3_320.json")
-            self.yolo_model = os.path.join(get_package_share_directory("cam_lidar_fusion"), "blob_model/shelf_picker_v3_320_openvino_2022.1_6shave.blob")
+            # self.yolo_config = os.path.join(get_package_share_directory("cam_lidar_fusion"), "blob_model/shelf_picker_v3_320.json")
+            # self.yolo_model = os.path.join(get_package_share_directory("cam_lidar_fusion"), "blob_model/shelf_picker_v3_320_openvino_2022.1_6shave.blob")
             # self.yolo_config = os.path.join(get_package_share_directory("cam_lidar_fusion"), "blob_model/obstacle_v2_320.json")
             # self.yolo_model = os.path.join(get_package_share_directory("cam_lidar_fusion"), "blob_model/obstacle_v2_320_openvino_2022.1_6shave.blob")
-            self.yolo_config = os.path.join(get_package_share_directory("cam_lidar_fusion"), "blob_model/vow_v1_320.json")
-            self.yolo_model = os.path.join(get_package_share_directory("cam_lidar_fusion"), "blob_model/cow_v1_openvino_2022.1_6shave.blob")
+            self.yolo_config = os.path.join(get_package_share_directory("cam_lidar_fusion"), "blob_model/cow_v1_320.json")
+            self.yolo_model = os.path.join(get_package_share_directory("cam_lidar_fusion"), "blob_model/cow_v1_320_openvino_2022.1_6shave.blob")
         # #####################################################################################################################################################
 
         # Config camera type, camera intrinsic matrix, size of the image (row, col) ###########################################################################
@@ -130,18 +131,8 @@ class FusionNode(Node):
             print(e)
 
     def lidar_subs_callback(self, msg):
+        # Get camera frame ########################################################################
         frame = None
-        max_dist_thresh = 10  # the max distance used for color coding in visualization window.
-        # print("Received: ", msg.fields)  # Print the received message
-        lidar_points = np.array(list(read_points(msg, skip_nans=True))).T  # 4xn matrix, (x,y,z,i)
-        xs, ys, ps = lidar2pixel(lidar_points, self.R, self.T, self.K)
-
-        filtered_x, filtered_y, filtered_p = filter_points(xs, ys, ps, self.img_size)
-
-        self.depth_matrix = points_to_img(filtered_x, filtered_y, filtered_p, self.img_size)
-
-        # Visualization ####################################################################################
-
         if self.use_ROS_camera_topic:  # use ROS subscriber for oak cameras
             if self.frame is not None:
                 frame = self.frame.copy()
@@ -157,7 +148,16 @@ class FusionNode(Node):
                 if in_q is not None:
                     frame = in_q.getCvFrame()
                     # print("got frame")
-        
+
+        # Compute Depth Matrix #########################################################################
+        lidar_points = np.array(list(read_points(msg, skip_nans=True))).T  # 4xn matrix, (x,y,z,i)
+        xs, ys, ps = lidar2pixel(lidar_points, self.R, self.T, self.K)
+
+        filtered_x, filtered_y, filtered_p = filter_points(xs, ys, ps, self.img_size)
+
+        self.depth_matrix = points_to_img(filtered_x, filtered_y, filtered_p, self.img_size)
+
+        # Visualization ####################################################################################
         if frame is not None:
             if not self.run_yolo_on_camera:
                 detections_xyxyn = self.yolo_predict(frame)
@@ -197,6 +197,7 @@ class FusionNode(Node):
             # ################################################################################################################
 
             # Draw circles for the lidar points
+            max_dist_thresh = 10  # the max distance used for color coding in visualization window.
             if self.show_lidar_projections:
                 for i in range(len(filtered_p)):
                     color_intensity = int((filtered_p[i] / max_dist_thresh * 255).clip(0, 255))
@@ -212,20 +213,6 @@ class FusionNode(Node):
 
             img_msg = self.bridge.cv2_to_imgmsg(frame, "bgr8")
             self.fusion_img_pubs_.publish(img_msg)
-
-        # Debugging #############################################################################################3
-        # cv2.imshow('depth img', ((self.depth_matrix*1000).clip(0, 255)).astype(np.int8))
-        # print('xs size: ', xs.shape)
-        # print('filtered points size: ', filtered_x.shape)
-        # print('filtered p: ', filtered_p)
-        # print('depth_matrix size: ', self.depth_matrix.shape)
-        # print('max in depth_matrix: ', np.max(self.depth_matrix))
-        # np.set_printoptions(threshold=np.inf)
-        # print('depth matrix: ', self.depth_matrix)
-        # fig = plt.figure()
-        # ax = plt.axes(projection='3d')
-        # X, Y = np.meshgrid(np.arange(0, img_size[1], 1), np.arange(0, img_size[0], 1))
-        # ax.plot3D(X, Y, self.depth_matrix)
     
     def get_oak_pipeline(self):
         pipeline = dai.Pipeline()
