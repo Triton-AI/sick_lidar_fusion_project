@@ -91,6 +91,7 @@ class FusionNode(Node):
         # ###############################################################################################################################################
         
         if self.record_video:
+            print("recording video")
             fourcc = cv2.VideoWriter_fourcc(*'XVID')
             self.recording_out = cv2.VideoWriter(self.video_file_name, fourcc, 20.0, (self.img_size[1],  self.img_size[0]))
 

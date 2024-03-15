@@ -13,7 +13,7 @@
             "anchors": [],
             "anchor_masks": {},
             "iou_threshold": 0.5,
-            "confidence_threshold": 0.3
+            "confidence_threshold": 0.15
         }
     },
     "mappings": {
