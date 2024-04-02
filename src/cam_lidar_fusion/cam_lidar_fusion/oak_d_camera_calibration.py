@@ -5,6 +5,11 @@ import cv2  # opencv - display the video stream
 import depthai  # depthai - access the camera and its data packets
 
 # Oak-d Camera initialization #######################################################################3
+# this can be useful when we want to run YOLO on camera, 
+# where the output image size is forced to equal to the YOLO model's input img size
+use_custom_img_size = False 
+custom_img_size = (320, 320)  # put the size of the YOLO input frame here
+
 
 # Start defining a pipeline
 pipeline = depthai.Pipeline()
@@ -19,9 +24,11 @@ cam_rgb.setInterleaved(False)
 # Create output
 xout_rgb = pipeline.create(depthai.node.XLinkOut)
 xout_rgb.setStreamName("rgb")
-# cam_rgb.video.link(xout_rgb.input)
-cam_rgb.setPreviewSize(320, 320)
-cam_rgb.preview.link(xout_rgb.input)
+if use_custom_img_size:
+    cam_rgb.setPreviewSize(custom_img_size[0], custom_img_size[1])
+    cam_rgb.preview.link(xout_rgb.input)
+else:
+    cam_rgb.video.link(xout_rgb.input)
 
 device = depthai.Device(pipeline)
 q_rgb = device.getOutputQueue("rgb")
@@ -52,7 +59,7 @@ imgpoints = []  # 2d points in image plane.
 print("Please move the camera slowly when you are collecting sample images")
 print("Please press 'q' to quit once you are done collecting sample images for calibration")
 while True:
-    key = cv2.waitKey(300) & 0xFF
+    key = cv2.waitKey(100) & 0xFF
     # if 'q' is pressed, break from the loop
     if key == ord("q"):
         break

@@ -34,7 +34,7 @@ cap = cv2.VideoCapture(0)
 print("Please move the camera slowly when you are collecting sample images")
 print("Please press 'q' to quit once you are done collecting sample images for calibration")
 while True:
-    key = cv2.waitKey(300) & 0xFF
+    key = cv2.waitKey(100) & 0xFF
     # if 'q' is pressed, break from the loop
     if key == ord("q"):
         break

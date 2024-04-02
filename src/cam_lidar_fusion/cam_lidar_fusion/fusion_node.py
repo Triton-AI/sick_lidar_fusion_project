@@ -6,7 +6,6 @@ from sensor_msgs.msg import PointCloud2
 # from sensor_msgs.msg import PointCloud
 from rclpy.qos import qos_profile_sensor_data
 import numpy as np
-import matplotlib.pyplot as plt
 import cv2
 import depthai as dai
 from ultralytics import YOLO
@@ -17,8 +16,6 @@ import json
 from pathlib import Path
 import blobconverter
 
-# from cam_lidar_fusion.cone_detection import detect_cones
-
 
 class FusionNode(Node):
     def __init__(self):
@@ -26,10 +23,11 @@ class FusionNode(Node):
         # self.T = np.array([0, 0.2, 0])  # lidar frame position seen from the camera's frame
         self.T = np.array([-0.02, 0.13, -0.015])  # oak lr test
 
-        self.camera_type = "OAK_LR"  # WEBCAM, OAK_WIDE, OAK_LR
+        self.camera_type = "OAK_LR"  # WEBCAM, OAK_LR, ROS
         self.show_lidar_projections = True  # whether or not to draw lidar points on the output image
         self.lidar_projections_size = 2  # radius of the lidar points on the image
         self.use_ROS_camera_topic = False  # use ROS subscriber to get camera images
+        self.img_topic_name = '/oak/rgb/image_raw'  # the topic name of the image we want to subscribe to
         self.show_fusion_result_opencv = False  # use cv2.imshow to show the fusion result
         self.run_yolo_on_camera = True  # Only for OAK cameras, run the YOLO detection model on camera or not
         self.record_video = True  # whether record a video or not
@@ -65,17 +63,6 @@ class FusionNode(Node):
             if not self.cap.isOpened():
                 print("Cannot open webcam")
                 exit()
-        elif self.camera_type == "OAK_WIDE":
-            # oak-d pro wide ############################################################
-            self.K = np.array([[1007.03765, 0, 693.05655], [0, 1007.59267, 356.9163], [0, 0, 1]])  # K matrix from camera_calibration
-            self.img_size = [720, 1280]  # Size of the img captured by the camera
-            if not self.use_ROS_camera_topic:
-                if not self.run_yolo_on_camera:
-                    pipeline = self.get_oak_pipeline()
-                    self.device = dai.Device(pipeline)
-                else:
-                    pipeline, self.img_size = self.get_oak_pipeline_with_nn()
-                    self.device = dai.Device(pipeline)
         elif self.camera_type == "OAK_LR":
             # oak-d LR #################################################################
             self.K = np.array([[1147.15312, 0., 936.61046], [0., 1133.707, 601.71022], [0, 0, 1]])
@@ -88,6 +75,9 @@ class FusionNode(Node):
                     self.K = np.array([[357.60759842, 0., 161.29415866], [0., 356.51492723, 154.07382818], [0., 0., 1.]])
                     pipeline, self.img_size = self.get_oak_pipeline_with_nn()
                     self.device = dai.Device(pipeline)
+        elif self.camera_type == "ROS":
+            self.K = np.array([[543.892, 0, 308.268], [0, 537.865, 214.227], [0, 0, 1]])
+            self.img_size = [480, 640]
         else:
             print("camera type not supported")
             exit()
@@ -110,8 +100,8 @@ class FusionNode(Node):
 
         self.oak_d_cam_subs = self.create_subscription(
             Image,
-            '/oak/rgb/image_raw',
-            self.oak_d_cam_subs_callback,
+            self.img_topic_name,
+            self.cam_subs_callback,
             qos_profile_sensor_data
         )
         self.frame = None
@@ -122,11 +112,11 @@ class FusionNode(Node):
         self.fusion_img_pubs_ = self.create_publisher(Image, 'camera/fused_img', 10)
         self.bridge = CvBridge()
         
-    def oak_d_cam_subs_callback(self, msg):
+    def cam_subs_callback(self, msg):
         try:
             self.frame = self.bridge.imgmsg_to_cv2(msg, "bgr8")
-            # self.img_size = self.frame.shape
-            print("setted img_size: ", self.img_size)
+            # self.img_size = self.frame.shape[0:2]
+            # print("setted img_size: ", self.img_size)
         except CvBridgeError as e:
             print(e)
 
