@@ -72,6 +72,8 @@ Please pay attention to "LiDAR and Camera Coordinate Frames Config," "YOLO Model
 
 ## YOLO Model Training
 See [here](https://cloud-swordfish-3c8.notion.site/Object-Detection-0d8e28b57b9e4c5b8a0de89ef90a1c05) for detailed instruction on how to train a YOLOv8 object detection model and how to convert the .pt model to blob model if you want to run the YOLO model on an OAK camera.
+- Please put the trained .pt YOLOv8 model in the `src/cam_lidar_fusion/model` folder.
+- If you want to run YOLOv8 models on OAK cameras, please follow the instructions provided in the link above to convert the .pt file. Extract the result and put everything into the `src/cam_lidar_fusion/blob_model` folder. NOTE: We switched to 320x320 size instead of the 640x640 as shown in the link to reduce computation time of the YOLO model.
 
 ## Other scripts in cam_lidar_fusion
 ### camera_calibration.py
