@@ -15,6 +15,7 @@ This project uses Python ROS2 to fuse the SICK LiDAR with a camera. It runs obje
 ```
 # clone the repo
 cd sick_lidar_fusion_project
+sudo apt-get install python3-rosdep
 sudo rosdep init
 rosdep update
 rosdep install --from-paths src --ignore-src -r -y
@@ -29,6 +30,7 @@ Launch the SICK LiDAR and make sure it is publishing the ```/cloud_unstructured_
 source install/setup.bash
 ros2 run sick_lidar_fusion fusion_node
 ```
+Once it runs, it will publish the fused result image in the `/camera/fused_img` topic. You can also adjust the config for `show_fusion_result_opencv` to make it `True` if you want it to display the fused result using `cv2.imshow`.
 
 ## Config
 There are config variables as global variables in `src/cam_lidar_fusion/cam_lidar_fusion/fusion_node.py`.
