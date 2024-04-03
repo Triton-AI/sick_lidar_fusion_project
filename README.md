@@ -15,6 +15,7 @@ This project uses Python ROS2 to fuse the SICK LiDAR with a camera. It runs obje
 ```
 # clone the repo
 cd sick_lidar_fusion_project
+sudo rosdep init
 rosdep update
 rosdep install --from-paths src --ignore-src -r -y
 colcon build
