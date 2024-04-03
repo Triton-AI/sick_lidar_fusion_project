@@ -81,14 +81,20 @@ See [here](https://cloud-swordfish-3c8.notion.site/Object-Detection-0d8e28b57b9e
 ## Other scripts in cam_lidar_fusion
 ### camera_calibration.py
 - Computes the `K` matrix for WEBCAM type camera. Will print the `K` matrix and the `img_size` in the console.
-- Before running, please print the camera calibration grid
+- Before running, please print the camera calibration grid in `src/cam_lidar_fusion/calibration_resources/pattern.png`.
 - To run, cd into its directory and `python3 camera_calibration.py` or run it in an IDE.
 - Capture the grid using the camera and move the grid or the camera slowly.
 - Press 'q' after a couple of seconds to finish recording the pictures for calibration.
-- It will print the `K` matrix and the `img_size`, and put these values in the if statement for `self.camera_type == "WEBCAM"`.
+- It will print the `K` matrix and the `img_size`. These values need to be put into the if statement for `self.camera_type == <the_corresponding_camera_type>`.
+  - If want to open camera using the `cv2.VideoCapture(0)` function, put the values in `WEBCAM` camera_type if statement.
+  - If want to subscribe to camera images in a ROS2 topic, put the values in `ROS` camera_type if statement, and make sure to adjust the config for the topic name.
 
 ### oak_d_camera_calibration.py
 - Works the same way as camera_calibration.py but for OAK cameras.
 - Can choose to set img_size to get `K` for that size
   - useful when we want to run YOLO on camera, where the output image size is currently forced to equal to the YOLO model's input img size.
   - to set custom image size, set `use_custom_img_size` to `True` and set the `custom_img_size` to desired value
+
+## Future Improvements
+- Add launch file and save config variables as param files
+- Add calibration methods to compute the frame transformation `R` and `T` from LiDAR to Camera.
